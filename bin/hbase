@@ -54,7 +54,34 @@
 #   JRUBY_OPTS       Extra options (eg '--1.9') passed to the hbase shell.
 #                    Empty by default.
 #
-bin=`dirname "$0"`
+
+function get_canonical_dir() {
+  target="$1"
+
+  canonical_name=`readlink -f ${target} 2>/dev/null`
+  if [[ $? -eq 0 ]]; then
+    canonical_dir=`dirname $canonical_name`
+    echo ${canonical_dir}
+    return
+  fi
+
+  # Mac has no readlink -f
+  cd `dirname ${target}`
+  target=`basename ${target}`
+
+  # chase down the symlinks
+  while [ -L ${target} ]; do
+    target=`readlink ${target}`
+    cd `dirname ${target}`
+    target=`basename ${target}`
+  done
+
+  canonical_dir=`pwd -P`
+  ret=${canonical_dir}
+  echo $ret
+}
+ 
+bin=$(get_canonical_dir "$0")
 bin=`cd "$bin">/dev/null; pwd`
 
 # This will set HBASE_HOME, etc.
@@ -185,10 +212,20 @@ for f in $HBASE_HOME/hbase*.jar; do
   fi
 done
 
+# Add MapR override jars before HBase' lib jars
+if [ ! -z $HBASE_MAPR_OVERRIDE_JARS ]; then
+  CLASSPATH=${CLASSPATH}:${HBASE_MAPR_OVERRIDE_JARS}
+fi
+
 # Add libs to CLASSPATH
 for f in $HBASE_HOME/lib/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
+
+# Append MapR extra jars 
+if [ ! -z $HBASE_MAPR_EXTRA_JARS ]; then
+  CLASSPATH=${CLASSPATH}:${HBASE_MAPR_EXTRA_JARS}
+fi
 
 # default log directory & file
 if [ "$HBASE_LOG_DIR" = "" ]; then
@@ -267,9 +304,9 @@ for cmd in ${server_cmds[@]}; do
 done
 
 if [[ $server ]]; then
-	HBASE_OPTS="$HBASE_OPTS $SERVER_GC_OPTS"
+	HBASE_OPTS="$HBASE_OPTS $SERVER_GC_OPTS $HBASE_SERVER_MAPR_OPTS"
 else
-	HBASE_OPTS="$HBASE_OPTS $CLIENT_GC_OPTS"
+	HBASE_OPTS="$HBASE_OPTS $CLIENT_GC_OPTS $HBASE_CLIENT_MAPR_OPTS $HBASE_CLIENT_OPTS"
 fi
 
 # figure out which class to run
@@ -360,7 +397,7 @@ fi
 
 # Exec unless HBASE_NOEXEC is set.
 if [ "${HBASE_NOEXEC}" != "" ]; then
-  "$JAVA" -XX:OnOutOfMemoryError="kill -9 %p" $JAVA_HEAP_MAX $HBASE_OPTS -classpath "$CLASSPATH" $CLASS "$@"
+  "$JAVA" -D"proc_$COMMAND" -XX:OnOutOfMemoryError="kill -9 %p" $JAVA_HEAP_MAX $HBASE_OPTS -classpath "$CLASSPATH" $CLASS "$@"
 else
-  exec "$JAVA" -XX:OnOutOfMemoryError="kill -9 %p" $JAVA_HEAP_MAX $HBASE_OPTS -classpath "$CLASSPATH" $CLASS "$@"
+  exec "$JAVA" -D"proc_$COMMAND" -XX:OnOutOfMemoryError="kill -9 %p" $JAVA_HEAP_MAX $HBASE_OPTS -classpath "$CLASSPATH" $CLASS "$@"
 fi
