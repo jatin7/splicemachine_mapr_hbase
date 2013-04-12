@@ -311,6 +311,9 @@ fi
 
 # figure out which class to run
 if [ "$COMMAND" = "shell" ] ; then
+  # send hbase shell log messages to the log file
+  export HBASE_LOGFILE="hbase-${HBASE_IDENT_STRING}-shell-${HOSTNAME}.log"
+  export HBASE_ROOT_LOGGER="INFO,DRFA"
   # eg export JRUBY_HOME=/usr/local/share/jruby
   if [ "$JRUBY_HOME" != "" ] ; then
     CLASSPATH="$JRUBY_HOME/lib/jruby.jar:$CLASSPATH"
