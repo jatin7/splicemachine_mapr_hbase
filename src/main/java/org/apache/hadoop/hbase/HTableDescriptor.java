@@ -1260,4 +1260,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     // MasterFileSystem.java:bootstrap()).
     return null;
   }
+
+  public void validate() {
+    for (HColumnDescriptor cf : families.values()) {
+      cf.validate();
+    }
+  }
 }

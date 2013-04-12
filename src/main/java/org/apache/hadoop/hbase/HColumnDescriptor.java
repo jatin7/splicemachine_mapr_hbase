@@ -1066,8 +1066,24 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   }
 
   /**
-   * MapR extension
+   * MapR extensions
    *
+   */
+
+  /**
+   * Validate the HColumnDescriptor parameters
+   * @throws IllegalArgumentException if any of the parameter is 
+   *         invalid
+   */
+  public void validate() {
+    if (getMinVersions() > getMaxVersions()) {
+      throw new IllegalArgumentException(
+        String.format("Min versions (%d) can not be greater than Max versions (%d).",
+          getMinVersions(), getMaxVersions()));
+    }
+  }
+
+  /**
    * @param key The key.
    * @param value The value.
    */
