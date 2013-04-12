@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
@@ -61,6 +62,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   private byte [] name = HConstants.EMPTY_BYTE_ARRAY;
 
   private String nameAsString = "";
+
+  private String alias = "";
 
   /**
    * A map which holds the metadata information of the table. This metadata 
@@ -198,9 +201,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * catalog tables, <code>.META.</code> and <code>-ROOT-</code>.
    */
   protected HTableDescriptor(final byte [] name, HColumnDescriptor[] families) {
-    this.name = name.clone();
+    this.alias = Bytes.toString(name);
+    this.name = FSUtils.adjustTableName(name);
     this.nameAsString = Bytes.toString(this.name);
-    setMetaFlags(name);
+    setMetaFlags(this.name);
     for(HColumnDescriptor descriptor : families) {
       this.families.put(descriptor.getName(), descriptor);
     }
@@ -212,9 +216,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   protected HTableDescriptor(final byte [] name, HColumnDescriptor[] families,
       Map<ImmutableBytesWritable,ImmutableBytesWritable> values) {
-    this.name = name.clone();
+    this.alias = Bytes.toString(name);
+    this.name = FSUtils.adjustTableName(name.clone());
     this.nameAsString = Bytes.toString(this.name);
-    setMetaFlags(name);
+    setMetaFlags(this.name);
     for(HColumnDescriptor descriptor : families) {
       this.families.put(descriptor.getName(), descriptor);
     }
@@ -255,8 +260,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   public HTableDescriptor(final byte [] name) {
     super();
+    this.alias = Bytes.toString(name);
+    this.name = FSUtils.adjustTableName(name);
     setMetaFlags(this.name);
-    this.name = this.isMetaRegion()? name: isLegalTableName(name);
+    //  GooseBump: No table name check
     this.nameAsString = Bytes.toString(this.name);
   }
 
@@ -269,6 +276,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   public HTableDescriptor(final HTableDescriptor desc) {
     super();
+    this.alias = desc.alias;
     this.name = desc.name.clone();
     this.nameAsString = Bytes.toString(this.name);
     setMetaFlags(this.name);
@@ -602,6 +610,15 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
   
   /**
+   * Get the original name of the table as a String
+   * 
+   * @return name of original table as a String 
+   */
+  public String getAlias() {
+    return alias;
+  }
+
+  /**
    * This get the class associated with the region split policy which 
    * determines when a region split should occur.  The class used by
    * default is {@link org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy}
@@ -621,7 +638,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @param name name of table 
    */
   public void setName(byte[] name) {
-    this.name = name;
+    this.alias = Bytes.toString(name);
+    this.name = FSUtils.adjustTableName(name);
     this.nameAsString = Bytes.toString(this.name);
     setMetaFlags(this.name);
   }

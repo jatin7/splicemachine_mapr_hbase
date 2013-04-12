@@ -77,11 +77,11 @@ public class MultipleColumnPrefixFilter extends FilterBase {
 
     if (lesserOrEqualPrefixes.size() != 0) {
       byte [] largestPrefixSmallerThanQualifier = lesserOrEqualPrefixes.last();
-      
+
       if (Bytes.startsWith(qualifier, largestPrefixSmallerThanQualifier)) {
         return ReturnCode.INCLUDE;
       }
-      
+
       if (lesserOrEqualPrefixes.size() == sortedPrefixes.size()) {
         return ReturnCode.NEXT_ROW;
       } else {
@@ -160,5 +160,9 @@ public class MultipleColumnPrefixFilter extends FilterBase {
 
     return String.format("%s (%d/%d): [%s]", this.getClass().getSimpleName(),
         count, this.sortedPrefixes.size(), prefixes.toString());
+  }
+
+  public TreeSet<byte[]> getSortedPrefixes() {
+    return sortedPrefixes;
   }
 }
