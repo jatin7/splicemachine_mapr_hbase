@@ -81,4 +81,7 @@ public class SubstringComparator extends WritableByteArrayComparable {
     out.writeUTF(substr);
   }
 
+  public String getSubstr() {
+    return substr;
+  }
 }

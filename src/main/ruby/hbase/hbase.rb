@@ -21,6 +21,7 @@
 include Java
 
 require 'hbase/admin'
+require 'hbase/m7admin'
 require 'hbase/table'
 require 'hbase/security'
 
@@ -42,6 +43,10 @@ module Hbase
 
     def admin(formatter)
       ::Hbase::Admin.new(configuration, formatter)
+    end
+
+    def m7admin(formatter)
+      ::Hbase::M7Admin.new(configuration, formatter)
     end
 
     # Create new one each time

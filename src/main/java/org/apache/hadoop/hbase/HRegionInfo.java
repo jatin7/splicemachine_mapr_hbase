@@ -24,6 +24,7 @@ import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -82,6 +83,22 @@ implements WritableComparable<HRegionInfo> {
 
   /** A non-capture group so that this can be embedded. */
   public static final String ENCODED_REGION_NAME_REGEX = "(?:[a-f0-9]+)";
+
+  static final Pattern ENCODED_REGION_PATTERN = Pattern.compile("[a-fA-F0-9]{32}");
+
+  /**
+   * Does region name contain its encoded name?
+   * @param regionName region name
+   * @return boolean indicating if this a new format region
+   *         name which contains its encoded name.
+   */
+  public static boolean isEncodedName(final byte[] regionName) {
+    return regionName != null && isEncodedName(Bytes.toString(regionName));
+  }
+
+  public static boolean isEncodedName(String regionName) {
+    return regionName != null && ENCODED_REGION_PATTERN.matcher(regionName).matches();
+  }
 
   /**
    * Does region name contain its encoded name?
@@ -384,6 +401,17 @@ implements WritableComparable<HRegionInfo> {
     }
     
     return b;
+  }
+
+  /**
+   * Gets the tablename from the specified table or region name
+   * @param tableOrRegionName
+   * @return
+   */
+  public static String getTableName(String tableOrRegionName) {
+    int offset = tableOrRegionName.indexOf(DELIMITER);
+    return (offset != -1)
+        ? tableOrRegionName.substring(0, offset) : tableOrRegionName;
   }
 
   /**

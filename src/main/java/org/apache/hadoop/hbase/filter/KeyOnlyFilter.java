@@ -22,10 +22,9 @@ package org.apache.hadoop.hbase.filter;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import java.util.ArrayList;
+
+import org.apache.hadoop.hbase.KeyValue;
 
 import com.google.common.base.Preconditions;
 
@@ -63,5 +62,9 @@ public class KeyOnlyFilter extends FilterBase {
 
   public void readFields(DataInput in) throws IOException {
     this.lenAsVal = in.readBoolean();
+  }
+
+  public boolean isLenAsVal() {
+    return lenAsVal;
   }
 }

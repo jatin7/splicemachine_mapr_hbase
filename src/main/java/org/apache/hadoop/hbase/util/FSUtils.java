@@ -27,6 +27,7 @@ import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +68,9 @@ public abstract class FSUtils {
 
   /** Full access permissions (starting point for a umask) */
   private static final String FULL_RWX_PERMISSIONS = "777";
+
+  private static final String HBASE_URI_PREFIX = "hbase://";
+  private static final byte[] HBASE_URI_PREFIX_BYTES = Bytes.toBytes(HBASE_URI_PREFIX);
 
   protected FSUtils() {
     super();
@@ -1381,6 +1385,31 @@ public abstract class FSUtils {
       } else {
         LOG.debug(prefix + file.getPath().getName());
       }
+    }
+  }
+
+  public static String adjustTableNameString(String tableName) {
+    return tableName.startsWith(HBASE_URI_PREFIX)
+        ? tableName.substring(tableName.lastIndexOf('/')+1)
+            : tableName;
+  }
+
+  public static byte[] adjustTableName(String tableName) {
+    return adjustTableName(Bytes.toBytes(tableName));
+  }
+
+  public static byte[] adjustTableName(byte[] tableName) {
+    if(Bytes.startsWith(tableName, HBASE_URI_PREFIX_BYTES)) {
+      int i = tableName.length-1;
+      for (; i >= HBASE_URI_PREFIX_BYTES.length; i--) {
+        if (tableName[i] == '/') {
+          break;
+        }
+      }
+      return Arrays.copyOfRange(tableName, i+1, tableName.length);
+    }
+    else {
+      return tableName.clone();
     }
   }
 }
