@@ -506,49 +506,53 @@ module Hbase
 
     def status(format)
       status = @admin.getClusterStatus()
-      if format == "detailed"
-        puts("version %s" % [ status.getHBaseVersion() ])
-        # Put regions in transition first because usually empty
-        puts("%d regionsInTransition" % status.getRegionsInTransition().size())
-        for k, v in status.getRegionsInTransition()
-          puts("    %s" % [v])
-        end
-        master_coprocs = java.util.Arrays.toString(@admin.getMasterCoprocessors())
-        if master_coprocs != nil
-          puts("master coprocessors: %s" % master_coprocs)
-        end
-        puts("%d live servers" % [ status.getServersSize() ])
-        for server in status.getServers()
-          puts("    %s:%d %d" % \
-            [ server.getHostname(), server.getPort(), server.getStartcode() ])
-          puts("        %s" % [ status.getLoad(server).toString() ])
-          for name, region in status.getLoad(server).getRegionsLoad()
-            puts("        %s" % [ region.getNameAsString() ])
-            puts("            %s" % [ region.toString() ])
+      if status != nil
+        if format == "detailed"
+          puts("version %s" % [ status.getHBaseVersion() ])
+          # Put regions in transition first because usually empty
+          puts("%d regionsInTransition" % status.getRegionsInTransition().size())
+          for k, v in status.getRegionsInTransition()
+            puts("    %s" % [v])
           end
+          master_coprocs = java.util.Arrays.toString(@admin.getMasterCoprocessors())
+          if master_coprocs != nil
+            puts("master coprocessors: %s" % master_coprocs)
+          end
+          puts("%d live servers" % [ status.getServersSize() ])
+          for server in status.getServers()
+            puts("    %s:%d %d" % \
+              [ server.getHostname(), server.getPort(), server.getStartcode() ])
+            puts("        %s" % [ status.getLoad(server).toString() ])
+            for name, region in status.getLoad(server).getRegionsLoad()
+              puts("        %s" % [ region.getNameAsString() ])
+              puts("            %s" % [ region.toString() ])
+            end
+          end
+          puts("%d dead servers" % [ status.getDeadServers() ])
+          for server in status.getDeadServerNames()
+            puts("    %s" % [ server ])
+          end
+        elsif format == "simple"
+          load = 0
+          regions = 0
+          puts("%d live servers" % [ status.getServersSize() ])
+          for server in status.getServers()
+            puts("    %s:%d %d" % \
+              [ server.getHostname(), server.getPort(), server.getStartcode() ])
+            puts("        %s" % [ status.getLoad(server).toString() ])
+            load += status.getLoad(server).getNumberOfRequests()
+            regions += status.getLoad(server).getNumberOfRegions()
+          end
+          puts("%d dead servers" % [ status.getDeadServers() ])
+          for server in status.getDeadServerNames()
+            puts("    %s" % [ server ])
+          end
+          puts("Aggregate load: %d, regions: %d" % [ load , regions ] )
+        else
+          puts "#{status.getServersSize} servers, #{status.getDeadServers} dead, #{'%.4f' % status.getAverageLoad} average load"
         end
-        puts("%d dead servers" % [ status.getDeadServers() ])
-        for server in status.getDeadServerNames()
-          puts("    %s" % [ server ])
-        end
-      elsif format == "simple"
-        load = 0
-        regions = 0
-        puts("%d live servers" % [ status.getServersSize() ])
-        for server in status.getServers()
-          puts("    %s:%d %d" % \
-            [ server.getHostname(), server.getPort(), server.getStartcode() ])
-          puts("        %s" % [ status.getLoad(server).toString() ])
-          load += status.getLoad(server).getNumberOfRequests()
-          regions += status.getLoad(server).getNumberOfRegions()
-        end
-        puts("%d dead servers" % [ status.getDeadServers() ])
-        for server in status.getDeadServerNames()
-          puts("    %s" % [ server ])
-        end
-        puts("Aggregate load: %d, regions: %d" % [ load , regions ] )
       else
-        puts "#{status.getServersSize} servers, #{status.getDeadServers} dead, #{'%.4f' % status.getAverageLoad} average load"
+        $stderr.puts "Unable to connect to HBase services, HBase status is unavailable"
       end
     end
 

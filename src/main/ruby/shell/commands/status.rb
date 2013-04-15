@@ -34,7 +34,14 @@ EOF
       end
 
       def command(format = 'summary')
-        admin.status(format)
+        if m7admin.m7_available? && m7admin.is_m7_default?
+          puts "This client is configured to use MapR tables only. HBase status is not available."
+        else
+          admin.status(format)
+        end
+        if m7admin.m7_available?
+          puts "MapR cluster status can be viewed using the 'maprcli dashboard info' command or the UI."
+        end
       end
     end
   end
