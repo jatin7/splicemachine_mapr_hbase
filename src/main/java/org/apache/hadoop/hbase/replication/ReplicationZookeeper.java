@@ -884,7 +884,8 @@ public class ReplicationZookeeper {
    * @throws KeeperException
    */
   public UUID getUUIDForCluster(ZooKeeperWatcher zkw) throws KeeperException {
-    return UUID.fromString(ClusterId.readClusterIdZNode(zkw));
+    String clusterId = ClusterId.readClusterIdZNode(zkw);
+    return (clusterId != null) ? UUID.fromString(clusterId) : null;
   }
 
   private void reconnectPeer(KeeperException ke, ReplicationPeer peer) {
