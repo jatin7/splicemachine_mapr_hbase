@@ -54,6 +54,7 @@ public class ZKConfig {
    * @return Properties holding mappings representing ZooKeeper zoo.cfg file.
    */
   public static Properties makeZKProps(Configuration conf) {
+    conf = new Configuration(conf);  // copy for mt safety
     // First check if there is a zoo.cfg in the CLASSPATH. If so, simply read
     // it and grab its configuration properties.
     ClassLoader cl = HQuorumPeer.class.getClassLoader();

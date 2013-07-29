@@ -761,8 +761,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       }
       registerMBean();
 
-      // start the snapshot handler, since the server is ready to run
-      this.snapshotManager.start();
+      if (!this.stopped && isHealthy()){
+        // start the snapshot handler, since the server is ready to run
+        this.snapshotManager.start();
+      }
 
       // We registered with the Master.  Go into run mode.
       long lastMsg = 0;
