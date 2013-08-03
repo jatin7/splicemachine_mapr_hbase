@@ -103,6 +103,9 @@
         <exclude>org.apache.hbase:hbase</exclude>
         <exclude>org.apache.mapreduce:capacity-scheduler</exclude>
         <exclude>org.apache.mapreduce:fair-scheduler</exclude>
+        <exclude>org.aspectj:aspectjrt</exclude>
+        <exclude>org.aspectj:aspectjtools</exclude>
+        <exclude>org.eclipse.jdt:core</exclude>
         <exclude>com.mapr.hadoop:maprfs</exclude>
         <exclude>com.mapr.util:central-logging</exclude>
       </excludes>
