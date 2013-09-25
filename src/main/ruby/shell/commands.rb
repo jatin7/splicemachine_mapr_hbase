@@ -45,8 +45,8 @@ module Shell
         shell.hbase_admin
       end
 
-      def m7admin
-        shell.m7_admin
+      def mapr_admin
+        shell.mapr_admin
       end
 
       def table(name)

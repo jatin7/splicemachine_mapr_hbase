@@ -1,6 +1,4 @@
 #
-# Copyright 2010 The Apache Software Foundation
-#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -20,27 +18,27 @@
 
 module Shell
   module Commands
-    class Status < Command
+    class SetPerm < Command
       def help
         return <<-EOF
-Show cluster status. Can be 'summary', 'simple', or 'detailed'. The
-default is 'summary'. Examples:
+Set access control permissions on a MapR table/column family/column qualifier.
+Syntax 1 : set_perm <table path>, <permission>, <expression>
+Syntax 2 : set_perm <table path>, {COLUMN => "column family[:qualifier]", PERM => "<permission>", EXPR => "<expression>"}
+Examples:
+  hbase> set_perm "/user/finance/payroll", "adminaccessperm", "g:managers"
+  hbase> set_perm "/user/finance/payroll", {COLUMN => "info", PERM => "compressionperm", EXPR => "u:alice"}
+  hbase> set_perm "/user/finance/payroll", {COLUMN => "info:bonus", PERM => "writeperm", EXPR => "u:bob | u:carol | g:managers"}
 
-  hbase> status
-  hbase> status 'simple'
-  hbase> status 'summary'
-  hbase> status 'detailed'
+Available permissions:
+#{com.mapr.fs.AceHelper::getPermissionsListForShellHelp}
+
+This command is not applicable for Apache HBase tables.
 EOF
       end
 
-      def command(format = 'summary')
-        if mapr_admin.m7_available? && mapr_admin.is_m7_default?
-          puts "This client is configured to use MapR tables only. HBase status is not available."
-        else
-          admin.status(format)
-        end
-        if mapr_admin.m7_available?
-          puts "MapR cluster status can be viewed using the 'maprcli dashboard info' command or the UI."
+      def command(table_path, *args)
+        format_simple_command do
+          mapr_admin.set_perm(table_path, *args)
         end
       end
     end
