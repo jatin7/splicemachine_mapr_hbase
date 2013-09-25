@@ -1,6 +1,4 @@
 #
-# Copyright 2010 The Apache Software Foundation
-#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -20,28 +18,21 @@
 
 module Shell
   module Commands
-    class Status < Command
+    class DelPerm < Command
       def help
         return <<-EOF
-Show cluster status. Can be 'summary', 'simple', or 'detailed'. The
-default is 'summary'. Examples:
+Delete a permission from a table/column family/column qualifier.
+Syntax : del_perm <permission> <table path> [<column family>[:<column qualifier>]]
+Examples:
+    hbase> del_perm 'encryptperm', '/user/finance/payroll', 'info:bonus'
 
-  hbase> status
-  hbase> status 'simple'
-  hbase> status 'summary'
-  hbase> status 'detailed'
+Available permissions:
+#{com.mapr.fs.AceHelper::getPermissionsListForShellHelp}
 EOF
       end
 
-      def command(format = 'summary')
-        if mapr_admin.m7_available? && mapr_admin.is_m7_default?
-          puts "This client is configured to use MapR tables only. HBase status is not available."
-        else
-          admin.status(format)
-        end
-        if mapr_admin.m7_available?
-          puts "MapR cluster status can be viewed using the 'maprcli dashboard info' command or the UI."
-        end
+      def command(permission, table_path, *args)
+        mapr_admin.del_perm(permission, table_path, *args)
       end
     end
   end

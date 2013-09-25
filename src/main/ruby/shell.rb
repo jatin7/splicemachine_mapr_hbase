@@ -79,8 +79,8 @@ module Shell
       @hbase_admin ||= hbase.admin(formatter)
     end
 
-    def m7_admin
-      @m7_admin ||= hbase.m7admin(formatter)
+    def mapr_admin
+      @mapr_admin ||= hbase.mapr_admin(self, formatter)
     end
 
     def hbase_table(name)
@@ -120,7 +120,7 @@ module Shell
       print 'Version '
       command('version')
       puts
-      if m7_admin.m7_available?
+      if mapr_admin.m7_available?
         puts "Not all HBase shell commands are applicable to MapR tables."
         puts "Consult MapR documentation for the list of supported commands."
         puts
@@ -319,5 +319,7 @@ Shell.load_command_group(
     grant
     revoke
     user_permission
+    set_perm
+    list_perm
   ]
 )

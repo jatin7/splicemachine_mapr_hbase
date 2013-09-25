@@ -32,7 +32,7 @@ EOF
       end
 
       def command(regex = nil)
-        if regex == nil && m7admin.m7_available? && !m7admin.is_m7_default?
+        if regex == nil && mapr_admin.m7_available? && !mapr_admin.is_m7_default?
           $stderr.puts "Listing HBase tables. Specify a path or configure namespace mappings to list M7 tables."
           begin
             masterRunning = admin.isMasterRunning
