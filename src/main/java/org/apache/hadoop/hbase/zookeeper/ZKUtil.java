@@ -98,8 +98,7 @@ public class ZKUtil {
    */
   public static RecoverableZooKeeper connect(Configuration conf, Watcher watcher)
   throws IOException {
-    Properties properties = ZKConfig.makeZKProps(conf);
-    String ensemble = ZKConfig.getZKQuorumServersString(properties);
+    String ensemble = ZKConfig.getZKQuorumServersString(conf);
     return connect(conf, ensemble, watcher);
   }
 
