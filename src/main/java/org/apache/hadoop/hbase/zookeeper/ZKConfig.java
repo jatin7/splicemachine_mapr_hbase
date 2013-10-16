@@ -243,6 +243,33 @@ public class ZKConfig {
    * @return Quorum servers
    */
   public static String getZKQuorumServersString(Configuration conf) {
+    String ensemble = conf.get(HConstants.ZOOKEEPER_ENSEMBLE);
+    // use the newer configuration, if set
+    if (ensemble != null) {
+      int clientPort = conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT,
+          HConstants.DEFAULT_ZOOKEPER_CLIENT_PORT);
+      StringBuilder sb = new StringBuilder();
+      for (String server : ensemble.split(",")) {
+        int portIndex = server.indexOf(':');
+        String host = (portIndex == -1) ? server : server.substring(0, portIndex);
+        int port = (portIndex == -1) ? clientPort : Integer.valueOf(server.substring(portIndex+1));
+        try {
+          InetAddress.getByName(host);
+          sb.append(",").append(host).append(':').append(port);
+        } catch (UnknownHostException e) {
+          LOG.warn(StringUtils.stringifyException(e));
+        }
+      }
+
+      if (sb.length() == 0) {
+        LOG.error("No valid quorum servers found in " + HConstants.ZOOKEEPER_ENSEMBLE);
+        return null;
+      }
+      return sb.substring(1);
+    }
+
+    // use the older properties otherwise
     return getZKQuorumServersString(makeZKProps(conf));
   }
+
 }
