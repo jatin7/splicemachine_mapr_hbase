@@ -30,6 +30,7 @@ org.apache.hadoop.hbase.regionserver.HRegionServer;
 org.apache.hadoop.hbase.regionserver.HRegion;
 org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 org.apache.hadoop.hbase.util.Bytes;
+org.apache.hadoop.hbase.util.Pair;
 org.apache.hadoop.hbase.HConstants;
 org.apache.hadoop.hbase.HServerInfo;
 org.apache.hadoop.hbase.HServerLoad;
@@ -50,7 +51,7 @@ org.apache.hadoop.hbase.HBaseConfiguration;
   } catch (IOException e) {
     e.printStackTrace();
   }
-  RegionServerMetrics metrics = regionServer.getMetrics();
+  List<Pair<String, String>> metricsList = regionServer.getMetrics().getList();
   List<HRegionInfo> onlineRegions = regionServer.getOnlineRegions();
   int interval = regionServer.getConfiguration().getInt("hbase.regionserver.msginterval", 3000)/1000;
   int masterInfoPort = regionServer.getConfiguration().getInt("hbase.master.info.port", 60010);
@@ -89,7 +90,16 @@ org.apache.hadoop.hbase.HBaseConfiguration;
 <tr><th>Attribute Name</th><th>Value</th><th>Description</th></tr>
 <tr><td>HBase Version</td><td><% org.apache.hadoop.hbase.util.VersionInfo.getVersion() %>, r<% org.apache.hadoop.hbase.util.VersionInfo.getRevision() %></td><td>HBase version and revision</td></tr>
 <tr><td>HBase Compiled</td><td><% org.apache.hadoop.hbase.util.VersionInfo.getDate() %>, <% org.apache.hadoop.hbase.util.VersionInfo.getUser() %></td><td>When HBase version was compiled and by whom</td></tr>
-<tr><td>Metrics</td><td><% metrics.toString() %></td><td>RegionServer Metrics; file and heap sizes are in megabytes</td></tr>
+<tr><td>Metrics</td><td style="border:0px; padding:0px;">
+<table id="metrics_table" style="width:100%;border:0;border-collapse:collapse;">
+<%java>int metricIndex = 0;</%java>
+<%while metricIndex < metricsList.size() %>
+<tr><%for int i = 0; i < 4 && metricIndex < metricsList.size(); i++, metricIndex++ %>
+  <td><% metricsList.get(metricIndex).getFirst() %> = <% metricsList.get(metricIndex).getSecond() %></td></%for>
+</tr>
+</%while>
+</table>
+</td><td>RegionServer Metrics; file and heap sizes are in megabytes</td></tr>
 <tr><td>Zookeeper Quorum</td><td><% regionServer.getZooKeeper().getQuorum() %></td><td>Addresses of all registered ZK servers</td></tr>
 <tr>
   <td>Coprocessors</td>

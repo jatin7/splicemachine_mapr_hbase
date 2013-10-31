@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver.metrics;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -31,7 +32,9 @@ import org.apache.hadoop.hbase.metrics.HBaseInfo;
 import org.apache.hadoop.hbase.metrics.MetricsRate;
 import org.apache.hadoop.hbase.metrics.PersistentMetricsTimeVaryingRate;
 import org.apache.hadoop.hbase.metrics.histogram.MetricsHistogram;
+
 import com.yammer.metrics.stats.Snapshot;
+
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Strings;
@@ -601,7 +604,19 @@ public class RegionServerMetrics implements Updater {
 
     return sb.toString();
   }
-  
+
+  public List<Pair<String, String>> getList() {
+    List<Pair<String, String>> list = new ArrayList<Pair<String, String>>();
+    String[] metrics = toString().split(",");
+    for (String metric : metrics) {
+      String[] nameValue = metric.split("=");
+      if (nameValue.length == 2) {
+        list.add(new Pair<String, String>(nameValue[0].trim(), nameValue[1].trim()));
+      }
+    }
+    return list;
+  }
+
   private StringBuilder appendHistogram(StringBuilder sb, 
       MetricsHistogram histogram) {
     sb = Strings.appendKeyValue(sb, 
