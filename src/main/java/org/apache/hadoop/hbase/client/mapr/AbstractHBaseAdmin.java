@@ -25,12 +25,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.UnknownRegionException;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 
 /**
@@ -43,6 +49,8 @@ import org.apache.hadoop.hbase.client.HTable;
  * example, an HBaseAdmin instance will not ride over a Master restart.
  */
 public abstract class AbstractHBaseAdmin implements Closeable {
+  private final static Log LOG = LogFactory.getLog(HBaseAdmin.class);
+
   /**
    * @param tableName Table to check.
    * @return True if table exists already.
@@ -297,4 +305,47 @@ public abstract class AbstractHBaseAdmin implements Closeable {
   /** {@inheritDoc} */
   public abstract void close() throws IOException;
 
+  public void closeRegion(byte[] regionname, String serverName) throws IOException {
+    LOG.warn("closeRegion() called for a MapR Table, silently ignoring.");
+  }
+
+  public void closeRegionWithEncodedRegionName(String encodedRegionName,
+      String serverName) throws IOException {
+    LOG.warn("closeRegionWithEncodedRegionName() called for a MapR Table, silently ignoring.");
+  }
+
+  public void closeRegion(ServerName sn, HRegionInfo hri) throws IOException {
+    LOG.warn("closeRegion() called for a MapR Table, silently ignoring.");
+  }
+
+  public void flush(byte[] tableNameOrRegionName) throws IOException {
+    LOG.warn("flush() called for a MapR Table, silently ignoring.");
+  }
+
+  public void compact(byte[] tableNameOrRegionName, byte[] columnFamily,
+      boolean major) throws IOException {
+    LOG.warn("compact() called for a MapR Table, silently ignoring.");
+  }
+
+  public void compact(ServerName sn, HRegionInfo hri, boolean major,
+      byte[] family) throws IOException {
+    LOG.warn("compact() called for a MapR Table, silently ignoring.");
+  }
+
+  public void move(byte[] encodedRegionName, byte[] destServerName)
+      throws UnknownRegionException, MasterNotRunningException, ZooKeeperConnectionException {
+    LOG.warn("move() called for a MapR Table, silently ignoring.");
+  }
+
+  public void assign(byte[] regionName) throws IOException {
+    LOG.warn("assign() called for a MapR Table, silently ignoring.");
+  }
+
+  public void unassign(byte[] regionName, boolean force) throws IOException {
+    LOG.warn("unassign() called for a MapR Table, silently ignoring.");
+  }
+
+  public void split(byte[] tableNameOrRegionName, byte[] splitPoint) throws IOException {
+    LOG.warn("split() called for a MapR Table, silently ignoring.");
+  }
 }

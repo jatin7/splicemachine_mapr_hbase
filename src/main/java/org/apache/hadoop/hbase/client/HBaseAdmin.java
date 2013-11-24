@@ -135,7 +135,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * {@link MasterNotRunningException} or {@link ZooKeeperConnectionException}
    * will not be thrown if HBase services are unavailable<p>If your
    * application logic requires the connection to be established (and
-   * exception be thrown) in the constructor, set 
+   * exception be thrown) in the constructor, set
    * <code>hbase.admin.connect.at.construction</code> to <code>true</code>.<p>
    *
    * @param c Configuration object
@@ -203,7 +203,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * {@link MasterNotRunningException} or {@link ZooKeeperConnectionException}
    * will not be thrown if HBase services are unavailable<p>If your
    * application logic requires the connection to be established (and
-   * exception be thrown) in the constructor, set 
+   * exception be thrown) in the constructor, set
    * <code>hbase.admin.connect.at.construction</code> to <code>true</code>.<p>
    *
    * Constructor for externally managed HConnections.
@@ -248,7 +248,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   }
 
   /**
-   * 
+   *
    * @param throwException if <code>true</code>, re-throws HBase connection
    *          exception, if any.
    * @return true if a connection to Apache HBase services was successful.
@@ -265,7 +265,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         return false;
       }
 
-      // try to connect to HBase only the first time. if connection fails, 
+      // try to connect to HBase only the first time. if connection fails,
       // remember it (and the exception) for subsequent calls.
       if (isHbaseAvailable_) {
         try {
@@ -313,8 +313,8 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @param tableName
    * @param connectToHBaseOtherwise
    * @return
-   * @throws MasterNotRunningException 
-   * @throws ZooKeeperConnectionException 
+   * @throws MasterNotRunningException
+   * @throws ZooKeeperConnectionException
    */
   private boolean checkIfMapRTable(String tableName, boolean connectToHBaseOtherwise)
       throws ZooKeeperConnectionException, MasterNotRunningException {
@@ -333,15 +333,15 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @param tableName
    * @param connectToHBaseOtherwise
    * @return
-   * @throws MasterNotRunningException 
-   * @throws ZooKeeperConnectionException 
+   * @throws MasterNotRunningException
+   * @throws ZooKeeperConnectionException
    */
   private boolean checkIfMapRTable(byte[] tableName, boolean connectToHBaseOtherwise)
       throws ZooKeeperConnectionException, MasterNotRunningException {
     return checkIfMapRTable(Bytes.toString(tableName), connectToHBaseOtherwise);
   }
 
-  private void commonInit(Configuration c) 
+  private void commonInit(Configuration c)
       throws ZooKeeperConnectionException, MasterNotRunningException {
     this.conf = c;
     try {
@@ -397,11 +397,11 @@ public class HBaseAdmin implements Abortable, Closeable {
     return this.aborted;
   }
 
-  /** 
+  /**
    * <p><b>MapR Notes: </b>Do not call if HBase services are not installed
    * and configured in your cluster. It will return <code>null</code> after
    * trying, and failing, to connect to HBase services.<p>
-   * 
+   *
    * @return HConnection used by this object. */
   public HConnection getConnection() {
     try {
@@ -434,7 +434,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   throws MasterNotRunningException, ZooKeeperConnectionException {
     int numRetries = this.conf.getInt("hbase.client.retries.number", 10);
     try {
-      this.conf.setInt("hbase.client.retries.number", 
+      this.conf.setInt("hbase.client.retries.number",
           this.conf.getInt("hbase.client.retries.number.alternate", 1));
       ensureConnectedToHBase();
     } finally {
@@ -1307,7 +1307,7 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   /**
    * <b>MapR Notes: </b>For MapR tables, both values will always be 0.<p>
-   * 
+   *
    * Get the status of alter command - indicates how many regions have received
    * the updated schema Asynchronous operation.
    *
@@ -1470,7 +1470,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void closeRegion(final byte [] regionname, final String serverName)
   throws IOException {
     if (checkIfMapRTable(regionname, true)) {
-      LOG.warn("closeRegion() called for a MapR Table, silently ignoring.");
+      maprHBaseAdmin_.closeRegion(regionname, serverName);
       return;
     }
     CatalogTracker ct = getCatalogTracker();
@@ -1521,7 +1521,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public boolean closeRegionWithEncodedRegionName(final String encodedRegionName,
       final String serverName) throws IOException {
     if (checkIfMapRTable(encodedRegionName, true)) {
-      LOG.warn("closeRegionWithEncodedRegionName() called for a MapR Table, silently ignoring.");
+      maprHBaseAdmin_.closeRegionWithEncodedRegionName(encodedRegionName, serverName);
       return true;
     }
     byte[] encodedRegionNameInBytes = Bytes.toBytes(encodedRegionName);
@@ -1550,7 +1550,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void closeRegion(final ServerName sn, final HRegionInfo hri)
   throws IOException {
     if (checkIfMapRTable(hri.getRegionName(), true)) {
-      LOG.warn("closeRegion() called for a MapR Table, silently ignoring.");
+      maprHBaseAdmin_.closeRegion(sn, hri);
       return;
     }
     HRegionInterface rs =
@@ -1583,7 +1583,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void flush(byte [] tableNameOrRegionName)
   throws IOException, InterruptedException {
     if (checkIfMapRTable(tableNameOrRegionName, true)) {
-      LOG.warn("flush() called for a MapR Table, silently ignoring.");
+      maprHBaseAdmin_.flush(tableNameOrRegionName);
       return;
     }
     CatalogTracker ct = getCatalogTracker();
@@ -1750,7 +1750,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     final byte[] columnFamily, final boolean major)
   throws IOException, InterruptedException {
     if (checkIfMapRTable(tableNameOrRegionName, true)) {
-      LOG.warn("compact() called for a MapR Table, silently ignoring.");
+      maprHBaseAdmin_.compact(tableNameOrRegionName, columnFamily, major);
       return;
     }
     CatalogTracker ct = getCatalogTracker();
@@ -1792,7 +1792,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       final boolean major, final byte [] family)
   throws IOException {
     if (checkIfMapRTable(hri.getRegionName(), true)) {
-      LOG.warn("compact() called for a MapR Table, silently ignoring.");
+      maprHBaseAdmin_.compact(sn, hri, major, family);
       return;
     }
     HRegionInterface rs =
@@ -1833,7 +1833,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void move(final byte [] encodedRegionName, final byte [] destServerName)
   throws UnknownRegionException, MasterNotRunningException, ZooKeeperConnectionException {
     if (checkIfMapRTable(encodedRegionName, true)) {
-      LOG.warn("move() called for a MapR Table, silently ignoring.");
+      maprHBaseAdmin_.move(encodedRegionName, destServerName);
       return;
     }
     getMaster().move(encodedRegionName, destServerName);
@@ -1849,7 +1849,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void assign(final byte[] regionName) throws MasterNotRunningException,
       ZooKeeperConnectionException, IOException {
     if (checkIfMapRTable(regionName, true)) {
-      LOG.warn("assign() called for a MapR Table, silently ignoring.");
+      maprHBaseAdmin_.assign(regionName);
       return;
     }
     getMaster().assign(regionName);
@@ -1872,7 +1872,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void unassign(final byte [] regionName, final boolean force)
   throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
     if (checkIfMapRTable(regionName, true)) {
-      LOG.warn("unassign() called for a MapR Table, silently ignoring.");
+      maprHBaseAdmin_.unassign(regionName, force);
       return;
     }
     getMaster().unassign(regionName, force);
@@ -1939,6 +1939,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    * Split a table or an individual region.
    * Asynchronous operation.
    *
+   * <p><b>MapR Notes:</b> For MapR tables, the parameter
+   * {@code tableNameOrRegionName} should take the form
+   * {@code "<table_path>,<region_fid>"}. For example:
+   * {@code "/user/admin/usertable,2085.39.131212"}.<p>
+   *
    * @param tableNameOrRegionName table or region to split
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
@@ -1952,6 +1957,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    * Split a table or an individual region.  Implicitly finds an optimal split
    * point.  Asynchronous operation.
    *
+   * <p><b>MapR Notes:</b> For MapR tables, the parameter
+   * {@code tableNameOrRegionName} should take the form
+   * {@code "<table_path>,<region_fid>"}. For example:
+   * {@code "/user/admin/usertable,2085.39.131212"}.<p>
+   *
    * @param tableNameOrRegionName table to region to split
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
@@ -1961,6 +1971,21 @@ public class HBaseAdmin implements Abortable, Closeable {
     split(tableNameOrRegionName, null);
   }
 
+  /**
+   * Split a table or an individual region.
+   * Asynchronous operation.
+   *
+   * <p><b>MapR Notes:</b> For MapR tables, the parameter
+   * {@code tableNameOrRegionName} should take the form
+   * {@code "<table_path>,<region_fid>"}. For example:
+   * {@code "/user/admin/usertable,2085.39.131212"}.
+   * The parameter {@code splitPoint} is currently not supported.<p>
+   *
+   * @param tableNameOrRegionName table to region to split
+   * @param splitPoint the explicit position to split on
+   * @throws IOException if a remote or network exception occurs
+   * @throws InterruptedException interrupt exception occurred
+   */
   public void split(final String tableNameOrRegionName,
     final String splitPoint) throws IOException, InterruptedException {
     split(Bytes.toBytes(tableNameOrRegionName), Bytes.toBytes(splitPoint));
@@ -1970,6 +1995,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    * Split a table or an individual region.
    * Asynchronous operation.
    *
+   * <p><b>MapR Notes:</b> For MapR tables, the parameter
+   * {@code tableNameOrRegionName} should take the form
+   * {@code "<table_path>,<region_fid>"}. For example:
+   * {@code "/user/admin/usertable,2085.39.131212"}.
+   * The parameter {@code splitPoint} is currently not supported.<p>
+   *
    * @param tableNameOrRegionName table to region to split
    * @param splitPoint the explicit position to split on
    * @throws IOException if a remote or network exception occurs
@@ -1978,7 +2009,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void split(byte [] tableNameOrRegionName,
       final byte [] splitPoint) throws IOException, InterruptedException {
     if (checkIfMapRTable(tableNameOrRegionName, true)) {
-      LOG.warn("split() called for a MapR Table, silently ignoring.");
+      maprHBaseAdmin_.split(tableNameOrRegionName, splitPoint);
       return;
     }
     CatalogTracker ct = getCatalogTracker();
@@ -2016,10 +2047,6 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   private void split(final ServerName sn, final HRegionInfo hri,
       byte[] splitPoint) throws IOException {
-    if (checkIfMapRTable(hri.getRegionName(), true)) {
-      LOG.warn("split() called for a MapR Table, silently ignoring.");
-      return;
-    }
     HRegionInterface rs =
       this.connection.getHRegionConnection(sn.getHostname(), sn.getPort());
     rs.splitRegion(hri, splitPoint);
@@ -2063,10 +2090,6 @@ public class HBaseAdmin implements Abortable, Closeable {
       final CatalogTracker ct) throws IOException {
     if (tableNameOrRegionName == null) {
       throw new IllegalArgumentException("Pass a table name or region name");
-    }
-    if (checkIfMapRTable(tableNameOrRegionName, true)) {
-      LOG.warn("getRegion() called for a MapR Table, returning null.");
-      return null;
     }
     Pair<HRegionInfo, ServerName> pair = MetaReader.getRegion(ct, tableNameOrRegionName);
     if (pair == null) {
