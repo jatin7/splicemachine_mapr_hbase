@@ -290,6 +290,7 @@ public class SecureClient extends HBaseClient {
                   }
                 });
             } catch (Exception ex) {
+              SecureServer.checkJCEKeyStrength();
               if (rand == null) {
                 rand = new Random();
               }

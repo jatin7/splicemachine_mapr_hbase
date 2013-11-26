@@ -51,13 +51,16 @@ import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.collect.ImmutableSet;
 
+import javax.crypto.Cipher;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
+
 import java.io.*;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
 import java.util.*;
 
@@ -315,6 +318,7 @@ public abstract class SecureServer extends HBaseServer {
           }
           replyToken = saslServer.evaluateResponse(saslToken);
         } catch (IOException e) {
+          checkJCEKeyStrength();
           IOException sendToClient = e;
           Throwable cause = e;
           while (cause != null) {
@@ -755,6 +759,21 @@ public abstract class SecureServer extends HBaseServer {
       }
       authManager.authorize(user != null ? user.getUGI() : null,
           protocol, getConf(), addr);
+    }
+  }
+
+  /**
+   * Validate if JCE Unlimited Strength Jurisdiction Policy Files are installed,
+   * logs a warning otherwise.
+   */
+  public static void checkJCEKeyStrength() {
+    try {
+      if (Cipher.getMaxAllowedKeyLength("AES") != Integer.MAX_VALUE) {
+        LOG.warn("JCE Unlimited Strength Jurisdiction Policy Files are not "
+            + "installed. This could cause authentication failures.");
+      }
+    } catch (NoSuchAlgorithmException e) {
+      LOG.warn(e.getMessage());
     }
   }
 }
