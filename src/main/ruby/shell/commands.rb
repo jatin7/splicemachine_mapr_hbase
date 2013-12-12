@@ -25,13 +25,20 @@ module Shell
 
       def initialize(shell)
         self.shell = shell
+        if shell.usecolor
+          @ansi_red = "\e[31m"
+          @ansi_reset = "\e[0m"
+        else
+          @ansi_red = ""
+          @ansi_reset = ""
+        end
       end
 
       def command_safe(debug, *args)
         translate_hbase_exceptions(*args) { command(*args) }
       rescue => e
         puts
-        puts "ERROR: #{e}"
+        puts "#{@ansi_red}ERROR: #{e}#{@ansi_reset}"
         puts "Backtrace: #{e.backtrace.join("\n           ")}" if debug
         puts
         puts "Here is some help for this command:"
