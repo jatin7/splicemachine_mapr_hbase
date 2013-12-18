@@ -2380,8 +2380,13 @@ public class HBaseAdmin implements Abortable, Closeable {
             ServerName sn = pair.getSecond();
             HRegionInterface rs =
               this.connection.getHRegionConnection(sn.getHostname(), sn.getPort());
-            switch (CompactionState.valueOf(
-              rs.getCompactionState(pair.getFirst().getRegionName()))) {
+            try {
+              state = CompactionState.valueOf(
+                  rs.getCompactionState(pair.getFirst().getRegionName()));
+            } catch (RemoteException re) {
+              throw re.unwrapRemoteException();
+            }
+            switch (state) {
             case MAJOR_AND_MINOR:
               return CompactionState.MAJOR_AND_MINOR;
             case MAJOR:
