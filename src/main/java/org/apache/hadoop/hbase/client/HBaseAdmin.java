@@ -353,7 +353,7 @@ public class HBaseAdmin implements Abortable, Closeable {
           new Class[] {Configuration.class, BaseTableMappingRules.class});
       }
     } catch (Exception e) {
-      throw new RuntimeException(e);
+      throw (e instanceof RuntimeException) ? (RuntimeException)e : new RuntimeException(e);
     }
     if (c.getBoolean(HBASE_ADMIN_CONNECT_AT_CONSTRUCTION, false)) {
       ensureConnectedToHBase();
