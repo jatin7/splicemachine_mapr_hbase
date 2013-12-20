@@ -2,6 +2,7 @@ package org.apache.hadoop.hbase.client.mapr;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -35,10 +36,20 @@ public class GenericHFactory<T> {
       }
       return (T) method.newInstance(params);
     }
-    catch (Throwable e) {
+    catch (Throwable t) {
       throw new RuntimeException(String.format("Error occurred while instantiating %s.\n==> %s.",
-        className, e.getMessage()), e);
+        className, getMessage(t)), t);
     }
+  }
+
+  private Object getMessage(Throwable t) {
+    String msg = t.getMessage();
+    while ((t instanceof InvocationTargetException || t instanceof RuntimeException || msg == null)
+         && t.getCause() != null && t.getCause() != t) {
+      t = t.getCause();
+      msg = t.toString();
+    }
+    return msg;
   }
 
   public static void handleIOException(Throwable t) throws IOException {
