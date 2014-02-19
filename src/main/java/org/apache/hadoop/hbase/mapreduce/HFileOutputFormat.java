@@ -55,6 +55,9 @@ import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
+import org.apache.hadoop.hbase.client.mapr.BaseTableMappingRules;
+import org.apache.hadoop.hbase.client.mapr.GenericHFactory;
+import org.apache.hadoop.hbase.client.mapr.TableMappingRulesFactory;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
@@ -101,13 +104,32 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   // override the auto-detection of datablock encoding.
   public static final String DATABLOCK_ENCODING_OVERRIDE_CONF_KEY =
       "hbase.mapreduce.hfileoutputformat.datablock.encoding";
+  private static final String MAPR_TABLE_PATH_CONF_KEY = "hbase.mapreduce.hfileoutputformat.mapr.tablepath";
+  private static final GenericHFactory<RecordWriter<ImmutableBytesWritable,KeyValue>> recWriterFactory_ =
+      new GenericHFactory<RecordWriter<ImmutableBytesWritable,KeyValue>>();
 
   public RecordWriter<ImmutableBytesWritable, KeyValue> getRecordWriter(final TaskAttemptContext context)
   throws IOException, InterruptedException {
+    final Configuration conf = context.getConfiguration();
+    final String tablePathName = conf.get(MAPR_TABLE_PATH_CONF_KEY);
+    if (tablePathName != null) {
+      LOG.info("detected MapR table " + tablePathName +
+               ", switching to BulkLoadRecordWriter");
+
+      Path tablePath = new Path(tablePathName);
+      try {
+        return recWriterFactory_.getImplementorInstance(
+            "com.mapr.fs.BulkLoadRecordWriter",
+            new Object[] { conf, tablePath },
+            new Class[] { Configuration.class, Path.class });
+      } catch (Throwable e) {
+        GenericHFactory.handleIOException(e);
+      }
+    }
+
     // Get the path of the temporary output file
     final Path outputPath = FileOutputFormat.getOutputPath(context);
     final Path outputdir = new FileOutputCommitter(outputPath, context).getWorkPath();
-    final Configuration conf = context.getConfiguration();
     final FileSystem fs = outputdir.getFileSystem(conf);
     // These configs. are from hbase-*.xml
     final long maxsize = conf.getLong(HConstants.HREGION_MAX_FILESIZE,
@@ -323,6 +345,23 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     }
   }
 
+  public static void configureMapRTablePath(Job job, String tableName)
+  throws IOException {
+    Configuration conf = job.getConfiguration();
+
+    BaseTableMappingRules tableMappingRule = 
+        TableMappingRulesFactory.create(conf);
+    if (!tableMappingRule.isMapRTable(tableName))
+      return;
+
+    Path tablePath = tableMappingRule.getMaprTablePath(tableName.getBytes());
+    conf.set(MAPR_TABLE_PATH_CONF_KEY, tablePath.toString());
+
+    TableMapReduceUtil.addDependencyJars(conf, tableMappingRule.getClass());
+    TableMapReduceUtil.addDependencyJars(job);
+    LOG.info("Configured " + MAPR_TABLE_PATH_CONF_KEY + " to " + tablePath);
+  }
+
   /**
    * Configure a MapReduce Job to perform an incremental load into the given
    * table. This
@@ -361,6 +400,10 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     } else {
       LOG.warn("Unknown map output value type:" + job.getMapOutputValueClass());
     }
+
+    // Remember the tablePath in jobConf
+    String tableName = Bytes.toString(table.getTableName());
+    configureMapRTablePath(job, tableName);
 
     LOG.info("Looking up current regions for table " + table);
     List<ImmutableBytesWritable> startKeys = getRegionStartKeys(table);
