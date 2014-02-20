@@ -98,6 +98,7 @@
       <unpack>false</unpack>
       <scope>runtime</scope>
       <excludes>
+        <exclude>org.apache.hadoop:hadoop-auth</exclude>
         <exclude>org.apache.hadoop:hadoop-core</exclude>
         <exclude>org.apache.hadoop:s3filesystem</exclude>
         <exclude>org.apache.hbase:hbase</exclude>
@@ -108,6 +109,7 @@
         <exclude>org.eclipse.jdt:core</exclude>
         <exclude>com.mapr.hadoop:maprfs</exclude>
         <exclude>com.mapr.util:central-logging</exclude>
+        <exclude>com.google.protobuf:protobuf-java</exclude>
       </excludes>
       <fileMode>0644</fileMode>
       <directoryMode>0644</directoryMode>

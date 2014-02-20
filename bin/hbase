@@ -253,7 +253,7 @@ function append_path() {
 JAVA_PLATFORM=""
 
 #If avail, add Hadoop to the CLASSPATH and to the JAVA_LIBRARY_PATH
-HADOOP_IN_PATH=$(PATH="${HADOOP_HOME:-${HADOOP_PREFIX}}/bin:$PATH" which hadoop 2>/dev/null)
+HADOOP_IN_PATH=$(PATH="$PATH:${HADOOP_HOME:-${HADOOP_PREFIX}}/bin" which hadoop 2>/dev/null)
 if [ -f ${HADOOP_IN_PATH} ]; then
   HADOOP_JAVA_LIBRARY_PATH=$(HADOOP_CLASSPATH="$CLASSPATH" ${HADOOP_IN_PATH} \
                              org.apache.hadoop.hbase.util.GetJavaProperty java.library.path 2>/dev/null)

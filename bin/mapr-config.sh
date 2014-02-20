@@ -24,9 +24,6 @@ BASE_MAPR=${MAPR_HOME:-/opt/mapr}
 env=${BASE_MAPR}/conf/env.sh
 [ -f $env ] && . $env
 
-# Set Hadoop home
-HADOOP_HOME=${HADOOP_HOME:-$BASE_MAPR/hadoop/hadoop-0.20.2}
-
 # Set the user if not set in the environment
 if [ "$HBASE_IDENT_STRING" == "" ]; then
   HBASE_IDENT_STRING=`id -nu`
@@ -60,15 +57,5 @@ for jar in ${MAPR_JARS}; do
     HBASE_MAPR_EXTRA_JARS=${HBASE_MAPR_EXTRA_JARS}:${JARS}
   fi
 done
-# JARs in ${HADOOP_HOME}/lib
-MAPR_JARS="maprfs-*.jar mapr-hbase-*.jar"
-for jar in ${MAPR_JARS}; do
-  JARS=`echo $(ls ${HADOOP_HOME}/lib/${jar} 2> /dev/null) | sed 's/\s\+/:/g'`
-  if [ "${JARS}" != "" ]; then
-    HBASE_MAPR_EXTRA_JARS=${HBASE_MAPR_EXTRA_JARS}:${JARS}
-  fi
-done
-# Now remove any additional ':' and export the variable
-HBASE_MAPR_EXTRA_JARS="${HBASE_MAPR_EXTRA_JARS#:}"
 
 export HBASE_OPTS HBASE_MAPR_OVERRIDE_JARS HBASE_MAPR_EXTRA_JARS HBASE_IDENT_STRING
