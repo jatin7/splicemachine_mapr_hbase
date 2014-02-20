@@ -1002,7 +1002,6 @@
     <slf4j.version>1.7.5</slf4j.version>
     <log4j.version>1.2.17</log4j.version>
     <mockito-all.version>1.8.5</mockito-all.version>
-    <protobuf.version>2.4.0a</protobuf.version>
     <stax-api.version>1.0.1</stax-api.version>
     <thrift.version>0.8.0</thrift.version>
     <zookeeper.version>3.4.5-mapr-1401</zookeeper.version>
@@ -1271,11 +1270,6 @@
     </dependency>
 
     <!-- REST dependencies -->
-    <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
-      <version>${protobuf.version}</version>
-    </dependency>
     <dependency>
       <groupId>com.sun.jersey</groupId>
       <artifactId>jersey-core</artifactId>
@@ -1565,6 +1559,7 @@
         </property>
       </activation>
       <properties>
+        <protobuf.version>2.4.1</protobuf.version>
         <slf4j.version>1.7.5</slf4j.version>
       </properties>
       <dependencies>
@@ -1580,6 +1575,12 @@
           <optional>true</optional>
           <scope>test</scope>
         </dependency>
+        <!-- REST dependencies -->
+        <dependency>
+          <groupId>com.google.protobuf</groupId>
+          <artifactId>protobuf-java</artifactId>
+          <version>${protobuf.version}</version>
+        </dependency>
       </dependencies>
       <build>
         <plugins>
@@ -1587,6 +1588,17 @@
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>build-helper-maven-plugin</artifactId>
             <executions>
+              <execution>
+                <id>add-protobuf-sources</id>
+                <goals>
+                  <goal>add-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>${project.basedir}/protobuf/2.4</source>
+                  </sources>
+                </configuration>
+              </execution>
               <execution>
                 <id>add-test-resource</id>
                 <goals>
@@ -2186,6 +2198,7 @@
       </activation>
       <properties>
         <hadoop.version>2.0.0-alpha</hadoop.version>
+        <protobuf.version>2.5.0</protobuf.version>
         <slf4j.version>1.6.1</slf4j.version>
       </properties>
       <dependencies>
@@ -2198,6 +2211,12 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-annotations</artifactId>
           <version>${hadoop.version}</version>
+        </dependency>
+        <!-- REST dependencies -->
+        <dependency>
+          <groupId>com.google.protobuf</groupId>
+          <artifactId>protobuf-java</artifactId>
+          <version>${protobuf.version}</version>
         </dependency>
         <!-- test deps for hadoop-2.0 profile -->
         <dependency>
@@ -2213,6 +2232,17 @@
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>build-helper-maven-plugin</artifactId>
             <executions>
+              <execution>
+                <id>add-protobuf-sources</id>
+                <goals>
+                  <goal>add-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>${project.basedir}/protobuf/2.5</source>
+                  </sources>
+                </configuration>
+              </execution>
               <execution>
                 <id>add-test-resource</id>
                 <goals>
