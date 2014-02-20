@@ -40,13 +40,13 @@ Compiling HBase with MapR patches
 ---------------------------------
 Clone and checkout the "&lt;hbase-version&gt;-mapr" tag or branch of the Apache HBase 
 release version from the github (https://github.com/mapr/hbase). For example,
-if you want to compile HBase version 0.94.13, checkout the "0.94.13-mapr" branch.
+if you want to compile HBase version 0.94.17, checkout the "0.94.17-mapr" branch.
 
 ```bash
-$ mkdir 0.94.13-mapr
-$ cd 0.94.13-mapr
+$ mkdir 0.94.17-mapr
+$ cd 0.94.17-mapr
 $ git clone git://github.com/mapr/hbase.git .
-$ git checkout 0.94.13-mapr
+$ git checkout 0.94.17-mapr
 $ mvn clean install package -DskipTests -Dgenerate.mapr.patches -P security
 ```
 

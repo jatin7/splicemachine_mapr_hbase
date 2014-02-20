@@ -973,9 +973,9 @@
     </buildDate>
     <compileSource>1.6</compileSource>
     <!-- This should be set to the Apache Github tag this release is based upon -->
-    <apache.git.tag>0.94.13</apache.git.tag>
+    <apache.git.tag>0.94.17</apache.git.tag>
     <!-- Latest version of Hadoop distributed with MapR -->
-    <mapr.hadoop.version>1.0.3-mapr-3.1.0-SNAPSHOT</mapr.hadoop.version>
+    <mapr.hadoop.version>1.0.3-mapr-3.1.0</mapr.hadoop.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
@@ -999,13 +999,13 @@
     <jersey.version>1.8</jersey.version>
     <jruby.version>1.6.5</jruby.version>
     <junit.version>4.11</junit.version>
-    <slf4j.version>1.4.3</slf4j.version>
+    <slf4j.version>1.7.5</slf4j.version>
     <log4j.version>1.2.17</log4j.version>
     <mockito-all.version>1.8.5</mockito-all.version>
     <protobuf.version>2.4.0a</protobuf.version>
     <stax-api.version>1.0.1</stax-api.version>
     <thrift.version>0.8.0</thrift.version>
-    <zookeeper.version>3.4.5-mapr-SNAPSHOT</zookeeper.version>
+    <zookeeper.version>3.4.5-mapr-1401</zookeeper.version>
     <hadoop-snappy.version>0.0.1-SNAPSHOT</hadoop-snappy.version>
     <clover.version>2.6.3</clover.version>
 
@@ -1565,7 +1565,7 @@
         </property>
       </activation>
       <properties>
-        <slf4j.version>1.4.3</slf4j.version>
+        <slf4j.version>1.7.5</slf4j.version>
       </properties>
       <dependencies>
         <dependency>
