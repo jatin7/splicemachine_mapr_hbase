@@ -34,6 +34,12 @@ module Hbase
       @conf = configuration
       @formatter = formatter
       @zk_wrapper = nil
+      begin
+        @mapping_rules = com.mapr.fs.MapRTableMappingRules.new(configuration)
+      rescue NameError => e
+        @mapping_rules = nil
+        return
+      end
     end
     
     def zkInit()
@@ -194,6 +200,31 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Is it a MapR table? Used during creation, so wont exist
+    def is_mapr_table?(table_path)
+      # Table name should be a string
+      raise(ArgumentError, "Table name must be of type String") unless table_path.kind_of?(String)
+      if @mapping_rules != nil && @mapping_rules.isMapRTable(table_path)
+        true;
+      else
+        false;
+      end
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Check if bulkload option needs to be added to the descriptor.
+    # Caller ensures that arg[BULKLOAD] exists in the command line.
+    def check_bulkload(table_name, arg, htd)
+      if is_mapr_table?(table_name)
+        raise(ArgumentError, "Bulkload value must be of type String") unless arg[BULKLOAD].kind_of?(String)
+        raise(ArgumentError, "Bulkload value can be 'true' or 'false' only.") unless arg[BULKLOAD].capitalize == 'False' or arg[BULKLOAD].capitalize == 'True'
+        htd.setValue(BULKLOAD, arg[BULKLOAD])
+      else
+        raise(ArgumentError, "BULKLOAD not supported for HBase tables")
+      end
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Creates a table
     def create(table_name, *args)
       # Fail if table name is not a string
@@ -208,7 +239,7 @@ module Hbase
       # Start defining the table
       htd = org.apache.hadoop.hbase.HTableDescriptor.new(table_name)
       splits = nil
-      # Args are either columns or splits, add them to the table definition
+      # Args are either columns, splits or bulkload, add them to the table definition
       # TODO: add table options support
       args.each do |arg|
         unless arg.kind_of?(String) || arg.kind_of?(Hash)
@@ -217,10 +248,14 @@ module Hbase
 
         if arg.kind_of?(String)
           # the arg is a string, default action is to add a column to the table
-          htd.addFamily(hcd(arg, htd))
+            htd.addFamily(hcd(arg, htd))
         else
-          # arg is a hash.  4 possibilities:
+          # arg is a hash.  5 possibilities:
           if (arg.has_key?(SPLITS) or arg.has_key?(SPLITS_FILE))
+            if (arg.has_key?(BULKLOAD))
+              check_bulkload(table_name, arg, htd)
+            end
+
             if arg.has_key?(SPLITS_FILE)
               unless File.exist?(arg[SPLITS_FILE])
                 raise(ArgumentError, "Splits file #{arg[SPLITS_FILE]} doesn't exist")
@@ -268,8 +303,14 @@ module Hbase
                 htd.setValue(k, v)
               end
             end
+            if (arg[BULKLOAD])
+              check_bulkload(table_name, arg, htd)
+            end
+          elsif (arg.has_key?(BULKLOAD))
+            # (3) bulkload - only for M7 tables
+            check_bulkload(table_name, arg, htd)
           else
-            # (3) column family spec
+            # (4) column family spec
             descriptor = hcd(arg, htd)
             htd.setValue(COMPRESSION_COMPACT, arg[COMPRESSION_COMPACT]) if arg[COMPRESSION_COMPACT]
             htd.addFamily(hcd(arg, htd))
@@ -392,6 +433,12 @@ module Hbase
             return
           end
 
+          if arg[BULKLOAD]
+            check_bulkload(table_name, arg, htd)
+            @admin.modifyTable(table_name.to_java_bytes, htd)
+            return
+          end
+
           descriptor = hcd(arg, htd)
 
           if arg[COMPRESSION_COMPACT]
@@ -424,6 +471,11 @@ module Hbase
             puts "Updating all regions with the new schema..."
             alter_status(table_name)
           end
+
+          if arg[BULKLOAD]
+            check_bulkload(table_name, arg, htd)
+          end
+
           next
         end
 
@@ -433,6 +485,11 @@ module Hbase
           htd.setReadOnly(JBoolean.valueOf(arg[READONLY])) if arg[READONLY]
           htd.setMemStoreFlushSize(JLong.valueOf(arg[MEMSTORE_FLUSHSIZE])) if arg[MEMSTORE_FLUSHSIZE]
           htd.setDeferredLogFlush(JBoolean.valueOf(arg[DEFERRED_LOG_FLUSH])) if arg[DEFERRED_LOG_FLUSH]
+
+          if arg[BULKLOAD]
+            check_bulkload(table_name, arg, htd)
+          end
+
           # (2) Here, we handle the alternate syntax of ownership setting, where method => 'table_att' is specified.
           htd.setOwnerString(arg[OWNER]) if arg[OWNER]
 
@@ -485,6 +542,9 @@ module Hbase
         if method == "table_att_unset"
           if arg.kind_of?(Hash)
             if (!arg[NAME])
+              if arg[BULKLOAD]
+                check_bulkload(table_name, arg, htd)
+              end
               next
             end
             if (htd.getValue(arg[NAME]) == nil)
@@ -497,6 +557,11 @@ module Hbase
               alter_status(table_name)
             end
           end
+
+          if arg[BULKLOAD]
+            check_bulkload(table_name, arg, htd)
+          end
+
           next
         end
 

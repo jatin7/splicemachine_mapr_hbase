@@ -77,6 +77,13 @@ You can also remove a table-scope attribute:
 There could be more than one alteration in one command:
 
   hbase> alter 't1', {NAME => 'f1'}, {NAME => 'f2', METHOD => 'delete'}
+
+Bulkload can be altered along with other options. It is not applicable for
+Apache HBase tables.
+  hbase> alter '/a0', BULKLOAD => 'false'
+  hbase> alter '/a0', METHOD => 'table_att', MAX_FILESIZE => '134217728',
+         BULKLOAD => 'false'
+
 EOF
       end
 
