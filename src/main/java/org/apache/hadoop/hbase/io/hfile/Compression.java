@@ -1,19 +1,3 @@
-/**
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.BufferedInputStream;
@@ -28,7 +12,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
@@ -201,12 +184,20 @@ public final class Compression {
         try {
           Class<?> externalCodec =
               ClassLoader.getSystemClassLoader()
-                  .loadClass("org.apache.hadoop.io.compress.SnappyCodec");
+                  .loadClass("org.apache.hadoop.hbase.io.hfile.HBaseSnappyCodec");
           return (CompressionCodec) ReflectionUtils.newInstance(externalCodec,
               conf);
         } catch (ClassNotFoundException e) {
-          throw new RuntimeException(e);
-        }
+ 	  try {
+ 		Class<?> externalCodec =
+                 ClassLoader.getSystemClassLoader()
+                   .loadClass("org.apache.hadoop.io.compress.SnappyCodec");
+                 return (CompressionCodec) ReflectionUtils.newInstance(externalCodec,
+                 conf);
+ 	    } catch (ClassNotFoundException ce) {
+ 		throw new RuntimeException(ce);
+            }
+         }
       }
     },
     LZ4("lz4") {
@@ -302,7 +293,7 @@ public final class Compression {
     public Compressor getCompressor() {
       CompressionCodec codec = getCodec(conf);
       if (codec != null) {
-        Compressor compressor = CodecPool.getCompressor(codec);
+        Compressor compressor = HBaseCodecPool.getCompressor(compressName,codec);
         if (compressor != null) {
           if (compressor.finished()) {
             // Somebody returns the compressor to CodecPool but is still using
@@ -321,14 +312,14 @@ public final class Compression {
 
     public void returnCompressor(Compressor compressor) {
       if (compressor != null) {
-        CodecPool.returnCompressor(compressor);
+        HBaseCodecPool.returnCompressor(compressName,compressor);
       }
     }
 
     public Decompressor getDecompressor() {
       CompressionCodec codec = getCodec(conf);
       if (codec != null) {
-        Decompressor decompressor = CodecPool.getDecompressor(codec);
+        Decompressor decompressor = HBaseCodecPool.getDecompressor(compressName,codec);
         if (decompressor != null) {
           if (decompressor.finished()) {
             // Somebody returns the decompressor to CodecPool but is still using
@@ -348,7 +339,7 @@ public final class Compression {
 
     public void returnDecompressor(Decompressor decompressor) {
       if (decompressor != null) {
-        CodecPool.returnDecompressor(decompressor);
+        HBaseCodecPool.returnDecompressor(compressName,decompressor);
         Annotation[] annotations = decompressor.getClass().getAnnotations();
         if (annotations != null) {
           for (Annotation annotation : annotations) {

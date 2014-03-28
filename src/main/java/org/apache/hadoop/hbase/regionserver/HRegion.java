@@ -3999,11 +3999,12 @@ public class HRegion implements HeapSize { // , Writable{
     /*
      * @return True if a filter rules the scanner is over, done.
      */
-    public synchronized boolean isFilterDone() {
-      return isFilterDoneInternal();
-    }
 
     private boolean isFilterDoneInternal() {
+        return this.filter != null && this.filter.filterAllRemaining();
+    }
+    public boolean isFilterDone() {
+
       return this.filter != null && this.filter.filterAllRemaining();
     }
 
