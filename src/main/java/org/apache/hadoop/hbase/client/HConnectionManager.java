@@ -564,7 +564,7 @@ public class HConnectionManager {
     private final Object metaRegionLock = new Object();
 
     private final Object userRegionLock = new Object();
-	
+
     private final Object resetLock = new Object();
 
     // thread executor shared by all HTableInterface instances created
@@ -579,34 +579,39 @@ public class HConnectionManager {
     // Known region HServerAddress.toString() -> HRegionInterface
 
     private final Map<String, HRegionInterface> servers =
-      new ConcurrentHashMap<String, HRegionInterface>();
+            new ConcurrentHashMap<String, HRegionInterface>();
     private final ConcurrentHashMap<String, String> connectionLock =
-      new ConcurrentHashMap<String, String>();
+            new ConcurrentHashMap<String, String>();
 
     /**
      * Map of table to table {@link HRegionLocation}s.  The table key is made
      * by doing a {@link Bytes#mapKey(byte[])} of the table's name.
      */
-    private final Map<Integer, SoftValueSortedMap<byte [], HRegionLocation>>
-      cachedRegionLocations =
-        new HashMap<Integer, SoftValueSortedMap<byte [], HRegionLocation>>();
+    private final Map<Integer, SoftValueSortedMap<byte[], HRegionLocation>>
+            cachedRegionLocations =
+            new HashMap<Integer, SoftValueSortedMap<byte[], HRegionLocation>>();
 
     // The presence of a server in the map implies it's likely that there is an
     // entry in cachedRegionLocations that map to this server; but the absence
     // of a server in this map guarentees that there is no entry in cache that
     // maps to the absent server.
     private final Set<String> cachedServers =
-        new HashSet<String>();
+            new HashSet<String>();
 
     // region cache prefetch is enabled by default. this set contains all
     // tables whose region cache prefetch are disabled.
     private final Set<Integer> regionCachePrefetchDisabledTables =
-      new CopyOnWriteArraySet<Integer>();
+            new CopyOnWriteArraySet<Integer>();
 
     private int refCount;
 
     // indicates whether this connection's life cycle is managed
     private final boolean managed;
+
+    public HConnectionImplementation(Configuration conf, boolean managed) throws ZooKeeperConnectionException {
+      this(conf, managed, null);
+    }
+
     /**
      * constructor
      * @param conf Configuration object
