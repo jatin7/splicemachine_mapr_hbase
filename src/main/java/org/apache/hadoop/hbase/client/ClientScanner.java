@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.CallSequenceOutOfOrderException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
@@ -265,6 +266,7 @@ public class ClientScanner extends AbstractClientScanner {
         // This flag is set when we want to skip the result returned.  We do
         // this when we reset scanner because it split under us.
         boolean skipFirst = false;
+        boolean retryAfterOutOfOrderException  = true;
         do {
           try {
             if (skipFirst) {
@@ -279,6 +281,7 @@ public class ClientScanner extends AbstractClientScanner {
             // returns an empty array if scanning is to go on and we've just
             // exhausted current region.
             values = callable.withRetries();
+            retryAfterOutOfOrderException  = true;
           } catch (DoNotRetryIOException e) {
             if (e instanceof UnknownScannerException) {
               long timeout = lastNext + scannerTimeout;
@@ -295,8 +298,9 @@ public class ClientScanner extends AbstractClientScanner {
               }
             } else {
               Throwable cause = e.getCause();
-              if (cause == null || (!(cause instanceof NotServingRegionException)
-                  && !(cause instanceof RegionServerStoppedException))) {
+              if ((cause == null || (!(cause instanceof NotServingRegionException)
+                   && !(cause instanceof RegionServerStoppedException)))
+                   && !(e instanceof CallSequenceOutOfOrderException)) {
                 throw e;
               }
             }
@@ -308,6 +312,15 @@ public class ClientScanner extends AbstractClientScanner {
               // invocation.
               skipFirst = true;
             }
+            if (e instanceof CallSequenceOutOfOrderException) {
+               if (retryAfterOutOfOrderException) {
+                 retryAfterOutOfOrderException = false;
+               } else {
+ 		LOG.error("Failed after retry, could be caused by rpc timeout", e);
+                 throw new DoNotRetryIOException("Failed after retry"
+                     + ", it could be caused by rpc timeout");
+               }
+             }
             // Clear region
             this.currentRegion = null;
             continue;
