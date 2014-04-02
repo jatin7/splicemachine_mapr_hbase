@@ -11,7 +11,7 @@ class GenerateUserFacingPoms {
     static void main(String[] args) {
         if (args.length != 5) {
             System.err.println """
-Need exactly five args: the HBase version, the full mapr-hbase version, the short MapR version, whether this is release or snapshot, and hadoop1 or hadoop2
+Need exactly five args: the HBase version, the full mapr-hbase version, the short MapR version, whether this is release or snapshot, and m7 or 'none'
 
 Example param 1
  - 0.94.13-mapr-1401
@@ -30,8 +30,8 @@ Example param 4:
  - snapshot
 
 Example param 5:
- - hadoop1
- - hadoop2
+ - m7
+ - none
 """
             System.exit(1)
         }
@@ -39,19 +39,19 @@ Example param 5:
         String fullMaprVersion = args[1]
         String shortMaprVersion = args[2]
         String snapshotSuffix = args[3]
-        String hadoopVersion = args[4]
+        String m7String = args[4]
         println "Full HBase version was read as: " + privateHbaseVersion
         println "Full mapr-hbase version was read as: " + fullMaprVersion
         println "Short MapR version was read as: " + shortMaprVersion
         println "Snapshot or release parameter was read as: " + snapshotSuffix
-        println "Hadoop version was read as: " + hadoopVersion
+        println "M7 or none was read as: " + m7String
 
         File originalPomFile = new File("pom.xml")
         XmlParser xmlIn = new XmlParser()
         xmlIn.setTrimWhitespace(true)
         Node pomTree = xmlIn.parse(originalPomFile)
 
-        if (snapshotSuffix.equalsIgnoreCase("snapshot")) {
+        if (snapshotSuffix.equalsIgnoreCase("snapshot") || snapshotSuffix.equalsIgnoreCase("-SNAPSHOT")) {
             snapshotSuffix = "-SNAPSHOT"
         } else if (snapshotSuffix.equalsIgnoreCase("release")) {
             snapshotSuffix = ""
@@ -60,17 +60,12 @@ Example param 5:
             System.err.println "it must be either snapshot or release"
             System.exit(1)
         }
-
-        if (hadoopVersion.equalsIgnoreCase("hadoop1")) {
-            Node hadoopOneTree = makeHadoopOnePom(pomTree, privateHbaseVersion, fullMaprVersion, shortMaprVersion, snapshotSuffix)
-            writePom(hadoopOneTree, shortMaprVersion)
-        } else if (hadoopVersion.equalsIgnoreCase("hadoop2")) {
-            Node hadoopTwoTree = makeHadoopTwoPom(pomTree, privateHbaseVersion, fullMaprVersion, shortMaprVersion, snapshotSuffix)
-            writePom(hadoopTwoTree, "hadoop2-" + shortMaprVersion)
+        if (m7String.equalsIgnoreCase("m7")) {
+            Node withM7Tree = makeM7Pom(pomTree, privateHbaseVersion, fullMaprVersion, shortMaprVersion, snapshotSuffix)
+			writePom(withM7Tree, shortMaprVersion)
         } else {
-            System.err.println "invalid hadoop version: " + hadoopVersion
-            System.err.println "it must be either hadoop1 or hadoop2"
-            System.exit(1)
+            Node nonM7Tree = makeNonM7Pom(pomTree, privateHbaseVersion, fullMaprVersion, shortMaprVersion, snapshotSuffix)
+			writePom(nonM7Tree, shortMaprVersion)
         }
     }
 
@@ -84,23 +79,20 @@ Example param 5:
         outputPomFile.write(writer.toString())
     }
 
-    private static Node makeHadoopOnePom(Node pomTree, String privateHbaseVersion, String fullMaprVersion, String shortMaprVersion, String snapshotSuffix) {
+    private static Node makeM7Pom(Node pomTree, String privateHbaseVersion, String fullMaprVersion, String shortMaprVersion, String snapshotSuffix) {
         Node newPomTree = pomTree.clone()
         newPomTree.version[0].setValue(privateHbaseVersion + "-m7-" + shortMaprVersion + snapshotSuffix)
         newPomTree.properties[0]."mapr.hadoop.version"[0].setValue(fullMaprVersion)
-
         newPomTree.dependencies[0].append(makeMaprHbaseDependency())
         return newPomTree
     }
-
-    private static Node makeHadoopTwoPom(Node pomTree, String privateHbaseVersion, String fullMaprVersion, String shortMaprVersion, String snapshotSuffix) {
-        Node newPomTree = pomTree.clone()
-        newPomTree.version[0].setValue(privateHbaseVersion + "-hadoop2-m7-" + shortMaprVersion + snapshotSuffix)
-        newPomTree.properties[0]."mapr.hadoop.version"[0].setValue(fullMaprVersion)
-
-        newPomTree.dependencies[0].append(makeMaprHbaseDependency())
-        return newPomTree
-    }
+	
+	private static Node makeNonM7Pom(Node pomTree, String privateHbaseVersion, String fullMaprVersion, String shortMaprVersion, String snapshotSuffix) {
+		Node newPomTree = pomTree.clone()
+		newPomTree.version[0].setValue(privateHbaseVersion + "-" + shortMaprVersion + snapshotSuffix)
+		newPomTree.properties[0]."mapr.hadoop.version"[0].setValue(fullMaprVersion)
+		return newPomTree
+	}
 
     private static Node makeMaprHbaseDependency() {
         NodeBuilder builder = new NodeBuilder()
