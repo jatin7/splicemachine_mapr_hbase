@@ -202,6 +202,7 @@ public final class Compression {
           Class<?> externalCodec =
               ClassLoader.getSystemClassLoader()
                   .loadClass("org.apache.hadoop.io.compress.SnappyCodec");
+                  //.loadClass("org.apache.hadoop.hbase.io.hfile.HBaseSnappyCodec");
           return (CompressionCodec) ReflectionUtils.newInstance(externalCodec,
               conf);
         } catch (ClassNotFoundException e) {
