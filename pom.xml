@@ -2609,14 +2609,18 @@ MAVEN_OPTS=-Xmx2048m mvn clean test -Pclover site -->
       </plugin>
     </plugins>
   </reporting>
-  <distributionManagement>
-      <site>
-          <id>hbase.apache.org</id>
-          <name>HBase Website at hbase.apache.org</name>
-          <!-- On why this is the tmp dir and not hbase.apache.org, see
-               https://issues.apache.org/jira/browse/HBASE-7593?focusedCommentId=13555866&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-13555866
-               -->
-          <url>file:///tmp</url>
-      </site>
-  </distributionManagement>
+	<distributionManagement>
+		<repository>
+			<uniqueVersion>false</uniqueVersion>
+			<id>structured-hbase-release</id>
+			<name>Structured HBase Release</name>
+			<url>http://nexus.splicemachine.com/nexus/content/repositories/releases</url>
+		</repository>
+		<snapshotRepository>
+			<uniqueVersion>true</uniqueVersion>
+			<id>structured-hbase-snapshot</id>
+			<name>Structured HBase Snapshot</name>
+			<url>http://nexus.splicemachine.com/nexus/content/repositories/snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
 </project>
