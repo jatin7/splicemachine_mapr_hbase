@@ -35,7 +35,7 @@
 # Modelled after $HADOOP_HOME/bin/hadoop-daemon.sh
 
 usage="Usage: hbase-daemon.sh [--config <conf-dir>]\
- (start|stop|restart|autorestart) <hbase-command> \
+ (start|stop|restart|status|autorestart) <hbase-command> \
  <args...>"
 
 # if no args specified, show usage
@@ -116,6 +116,46 @@ wait_until_done ()
     return 0
 }
 
+wait_for_filesystem()
+{
+    # Wait for filesystem to initialize
+    i=0
+    while [ $i -lt 600 ]; do
+      if [ `expr $i % 60` = "0" ]; then
+        # Log message for every 60 seconds
+        echo "`date` Waiting for filesystem to come up"  >> $loglog 2>&1
+      fi
+      hadoop fs -stat "/" >/dev/null 2>&1
+      if [ $? -eq 0 ] ; then
+       i=9999
+       break
+      fi
+
+      sleep 3
+      i=$[i+3]
+    done
+
+    if [ $i -ne 9999 ] ; then
+      echo "`date` Giving up after 600 attempts"  >> $loglog 2>&1
+      exit 1
+    fi
+
+    # Create Hbase volume and set compression off
+    hbaseVolume=${HBASE_VOLUME:-mapr.hbase}
+    mountDir=$(grep "maprfs://" "${HBASE_CONF_DIR}"/hbase-site.xml | sed "s/^.*maprfs:\/\///" | sed "s/<\/.*$//")
+    maprcli volume info -name "${hbaseVolume}" > /dev/null 2>&1
+    if [ $? -eq 0 ] ; then
+      echo "`date` HBase root is on volume '${hbaseVolume}'."  >> $loglog 2>&1
+    else
+      echo "`date` HBase volume '${hbaseVolume}' not found, creating."  >> $loglog 2>&1
+      maprcli volume create -name "${hbaseVolume}" -path "${mountDir}" -replicationtype low_latency >> $loglog 2>&1
+    fi
+
+    # set 64M chunksize and turn off compression
+    hadoop mfs -setcompression off "${mountDir}" >> $loglog 2>&1
+    hadoop mfs -setchunksize 67108864 "${mountDir}" >> $loglog 2>&1
+}
+
 # get log directory
 if [ "$HBASE_LOG_DIR" = "" ]; then
   export HBASE_LOG_DIR="$HBASE_HOME/logs"
@@ -182,6 +222,7 @@ case $startStop in
     hbase_rotate_log $logout
     hbase_rotate_log $loggc
     echo starting $command, logging to $logout
+    wait_for_filesystem
     nohup $thiscmd --config "${HBASE_CONF_DIR}" internal_start $command $args < /dev/null > ${logout} 2>&1  &
     sleep 1; head "${logout}"
   ;;
@@ -263,6 +304,19 @@ case $startStop in
       echo no $command to stop because no pid file $pid
     fi
     rm -f $pid
+  ;;
+
+(status)
+    if [ -f "$pid" ]; then
+      if kill -0 `cat $pid` > /dev/null 2>&1; then
+        echo $command running as process `cat $pid`.
+        exit 0
+      fi
+        echo $pid exists with pid `cat $pid` but no $command.
+        exit 1
+    fi
+    echo $command not running.
+    exit 1
   ;;
 
 (restart)
