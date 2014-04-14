@@ -30,16 +30,16 @@
 -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>org.apache</groupId>
-    <artifactId>apache</artifactId>
-    <version>12</version>
+    <groupId>com.mapr</groupId>
+    <artifactId>mapr-root</artifactId>
+    <version>1.0</version>
     <relativePath/>
     <!-- no parent resolution -->
   </parent>
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>pom</packaging>
-  <version>0.98.4</version>
+  <version>0.98.4-mapr-1408-SNAPSHOT</version>
   <name>HBase</name>
   <description>
     Apache HBase is the Hadoop database. Use it when you need
@@ -62,11 +62,6 @@
     <module>hbase-assembly</module>
     <module>hbase-testing-util</module>
   </modules>
-  <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/trunk</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/hbase/trunk</developerConnection>
-    <url>http://svn.apache.org/viewvc/hbase/trunk</url>
-  </scm>
   <issueManagement>
     <system>JIRA</system>
     <url>http://issues.apache.org/jira/browse/HBASE</url>
@@ -385,6 +380,12 @@
   </developers>
   <repositories>
     <repository>
+      <id>mapr release</id>
+      <url>http://repository.mapr.com/maven/</url>
+      <snapshots><enabled>true</enabled></snapshots>
+      <releases><enabled>true</enabled></releases>
+    </repository>
+    <repository>
       <id>apache release</id>
       <url>https://repository.apache.org/content/repositories/releases/</url>
     </repository>
@@ -579,6 +580,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-source-plugin</artifactId>
+          <version>2.2.1</version>
           <executions>
             <execution>
               <id>attach-sources</id>
@@ -593,6 +595,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-jar-plugin</artifactId>
+          <version>2.4</version>
           <executions>
             <execution>
               <phase>prepare-package</phase>
@@ -693,7 +696,7 @@
        <plugin>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-maven-plugins</artifactId>
-          <version>${hadoop-two.version}</version>
+          <version>${mapr.hadoop-two.version}</version>
           <configuration>
             <protocVersion>${protobuf.version}</protocVersion>
             <protocCommand>${protoc.path}</protocCommand>
@@ -880,6 +883,14 @@
     </maven.build.timestamp.format>
     <buildDate>${maven.build.timestamp}</buildDate>
     <compileSource>1.6</compileSource>
+    <!-- This should be set to the Apache Github tag this release is based upon -->
+    <apache.git.tag>0f1bf2e6681547206ff0cd933645d22a29602577</apache.git.tag><!-- Apache Github tag for 0.98.4 is wrong -->
+    <!-- Latest version of Hadoop distributed with MapR -->
+    <mapr.hadoop.version>1.0.3-mapr-3.1.1</mapr.hadoop.version>
+    <mapr.hadoop-two.version>2.4.1-mapr-4.0.1-SNAPSHOT</mapr.hadoop-two.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
     <!-- Dependencies -->
     <hadoop-two.version>2.2.0</hadoop-two.version>
     <hadoop-one.version>1.2.1</hadoop-one.version>
@@ -907,7 +918,7 @@
     <mockito-all.version>1.9.0</mockito-all.version>
     <protobuf.version>2.5.0</protobuf.version>
     <thrift.version>0.9.0</thrift.version>
-    <zookeeper.version>3.4.6</zookeeper.version>
+    <zookeeper.version>3.4.5-mapr-1406</zookeeper.version>
     <slf4j.version>1.6.4</slf4j.version>
     <hadoop-snappy.version>0.0.1-SNAPSHOT</hadoop-snappy.version>
     <clover.version>2.6.3</clover.version>
@@ -1557,7 +1568,7 @@
         <module>hbase-hadoop1-compat</module>
       </modules>
       <properties>
-        <hadoop.version>1.0.4</hadoop.version>
+        <hadoop.version>${mapr.hadoop.version}</hadoop.version>
         <!-- Need to set this for the Hadoop 1 compat module -->
         <hadoop-one.version>${hadoop.version}</hadoop-one.version>
         <compat.module>hbase-hadoop1-compat</compat.module>
@@ -1619,7 +1630,7 @@
         <module>hbase-hadoop2-compat</module>
       </modules>
       <properties>
-        <hadoop.version>${hadoop-two.version}</hadoop.version>
+        <hadoop.version>${mapr.hadoop-two.version}</hadoop.version>
         <compat.module>hbase-hadoop2-compat</compat.module>
         <assembly.file>src/main/assembly/hadoop-two-compat.xml</assembly.file>
       </properties>
@@ -1628,17 +1639,17 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-mapreduce-client-core</artifactId>
-            <version>${hadoop-two.version}</version>
+            <version>${mapr.hadoop-two.version}</version>
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
-            <version>${hadoop-two.version}</version>
+            <version>${mapr.hadoop-two.version}</version>
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
-            <version>${hadoop-two.version}</version>
+            <version>${mapr.hadoop-two.version}</version>
             <type>test-jar</type>
           </dependency>
           <dependency>
@@ -1658,12 +1669,12 @@
                   <artifactId>stax-api</artifactId>
                 </exclusion>
               </exclusions>
-            <version>${hadoop-two.version}</version>
+            <version>${mapr.hadoop-two.version}</version>
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-hdfs</artifactId>
-            <version>${hadoop-two.version}</version>
+            <version>${mapr.hadoop-two.version}</version>
             <type>test-jar</type>
               <exclusions>
                 <exclusion>
@@ -1683,12 +1694,12 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-auth</artifactId>
-            <version>${hadoop-two.version}</version>
+            <version>${mapr.hadoop-two.version}</version>
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
-            <version>${hadoop-two.version}</version>
+            <version>${mapr.hadoop-two.version}</version>
             <exclusions>
               <exclusion>
                 <groupId>javax.servlet.jsp</groupId>
@@ -1707,19 +1718,19 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-client</artifactId>
-            <version>${hadoop-two.version}</version>
+            <version>${mapr.hadoop-two.version}</version>
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-annotations</artifactId>
-            <version>${hadoop-two.version}</version>
+            <version>${mapr.hadoop-two.version}</version>
           </dependency>
           <!-- This was marked as test dep in earlier pom, but was scoped compile.
             Where do we actually need it? -->
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-minicluster</artifactId>
-            <version>${hadoop-two.version}</version>
+            <version>${mapr.hadoop-two.version}</version>
             <exclusions>
               <exclusion>
                 <groupId>javax.servlet.jsp</groupId>
