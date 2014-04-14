@@ -100,6 +100,19 @@ if [ -z "$HBASE_ENV_INIT" ] && [ -f "${HBASE_CONF_DIR}/hbase-env.sh" ]; then
   export HBASE_ENV_INIT="true"
 fi
 
+# Source mapr-config.sh. This needs to be done after hbase-env.sh is sourced
+# but before the JAVA_HOME test below
+BASE_MAPR=${MAPR_HOME:-/opt/mapr}
+if [ -z "$HBASE_MAPR_ENV_INIT" ]; then
+  # This will act as insurance if we need to override options for a release
+  if [ -f "${BASE_MAPR}/conf/mapr-hbase-config.sh" ]; then
+    . "${BASE_MAPR}/conf/mapr-hbase-config.sh"
+  elif [ -f "${HBASE_HOME}/bin/mapr-config.sh" ]; then
+    . "${HBASE_HOME}/bin/mapr-config.sh"
+  fi
+  export HBASE_MAPR_ENV_INIT="true"
+fi
+
 # Set default value for regionserver uid if not present
 if [ -z "$HBASE_REGIONSERVER_UID" ]; then
   HBASE_REGIONSERVER_UID="hbase"
