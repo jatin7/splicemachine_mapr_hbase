@@ -49,16 +49,6 @@
   </property>
 
   <property>
-    <name>fs.mapr.aggregate.writes</name>
-    <value>false</value>
-  </property>
-
-  <property>
-    <name>fs.mapr.readbuffering</name>
-    <value>false</value>
-  </property>
-
-  <property>
     <name>hbase.fsutil.maprfs.impl</name>
     <value>org.apache.hadoop.hbase.util.FSMapRUtils</value>
   </property>
@@ -75,4 +65,11 @@
     <value>debug</value>
   </property>
   -->
+
+  <!-- Allows file/db client to use 64 threads -->
+  <property>
+    <name>fs.mapr.threads</name>
+    <value>64</value>
+  </property>
+
 </configuration>
