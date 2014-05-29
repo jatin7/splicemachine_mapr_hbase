@@ -249,7 +249,7 @@ module Hbase
           # the arg is a string, default action is to add a column to the table
             htd.addFamily(hcd(arg, htd))
         else
-          # arg is a hash.  5 possibilities:
+          # arg is a hash. 4 possibilities:
           if (arg.has_key?(SPLITS) or arg.has_key?(SPLITS_FILE))
             if (arg.has_key?(BULKLOAD))
               check_bulkload(table_name, arg, htd)
@@ -305,14 +305,17 @@ module Hbase
             if (arg[BULKLOAD])
               check_bulkload(table_name, arg, htd)
             end
-          elsif (arg.has_key?(BULKLOAD))
-            # (3) bulkload - only for M7 tables
-            check_bulkload(table_name, arg, htd)
           else
-            # (4) column family spec
+            # (3) column family spec
             descriptor = hcd(arg, htd)
             htd.setValue(COMPRESSION_COMPACT, arg[COMPRESSION_COMPACT]) if arg[COMPRESSION_COMPACT]
             htd.addFamily(hcd(arg, htd))
+
+            # bulkload also in the hash?
+            if (arg.has_key?(BULKLOAD))
+              check_bulkload(table_name, arg, htd)
+            end
+
           end
         end
       end
@@ -432,6 +435,8 @@ module Hbase
             return
           end
 
+          # Note that we handle BULKLOAD similar to OWNER. Anything else after
+          # is ignored.
           if arg[BULKLOAD]
             check_bulkload(table_name, arg, htd)
             @admin.modifyTable(table_name.to_java_bytes, htd)
