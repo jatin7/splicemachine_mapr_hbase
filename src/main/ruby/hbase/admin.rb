@@ -224,6 +224,14 @@ module Hbase
       end
     end
 
+    # BULKLOAD is a per table property and cannot be specified with other
+    # options.
+    # Caller ensures that arg[BULKLOAD] exists in the command line.
+    def disallow_bulkload(loc)
+      raise(ArgumentError, "BULKLOAD cannot be combined with " +
+            loc + " option.")
+    end
+
     #----------------------------------------------------------------------------------------------
     # Creates a table
     def create(table_name, *args)
@@ -253,7 +261,7 @@ module Hbase
           # arg is a hash. 4 possibilities:
           if (arg.has_key?(SPLITS) or arg.has_key?(SPLITS_FILE))
             if (arg.has_key?(BULKLOAD))
-              check_bulkload(table_name, arg, htd)
+              disallow_bulkload("splits")
             end
 
             if arg.has_key?(SPLITS_FILE)
@@ -278,6 +286,15 @@ module Hbase
             raise(ArgumentError, "Number of regions must be specified") unless arg.has_key?(NUMREGIONS)
             raise(ArgumentError, "Split algorithm must be specified") unless arg.has_key?(SPLITALGO)
             raise(ArgumentError, "Number of regions must be greater than 1") unless arg[NUMREGIONS] > 1
+
+            if (arg.has_key?(BULKLOAD))
+              if (arg.has_key?(NUMREGIONS))
+                disallow_bulkload("numRegions")
+              else
+                disallow_bulkload("SplitAlgo");
+              end
+            end
+
             num_regions = arg[NUMREGIONS]
             split_algo = RegionSplitter.newSplitAlgoInstance(@conf, arg[SPLITALGO])
             splits = split_algo.split(JInteger.valueOf(num_regions))
@@ -306,17 +323,24 @@ module Hbase
             if (arg[BULKLOAD])
               check_bulkload(table_name, arg, htd)
             end
+          elsif (arg.has_key?(BULKLOAD))
+            # disallow CF creation with bulkload in same hash set
+            if arg.has_key?(NAME)
+              disallow_bulkload("ColFam")
+            end
+            # (3) bulkload - only for M7 tables
+            check_bulkload(table_name, arg, htd)
           else
-            # (3) column family spec
+            # (4) column family spec
+
+            # bulkload not allowed with CF args hash set
+            if (arg.has_key?(BULKLOAD))
+              disallow_bulkload("ColFam");
+            end
+
             descriptor = hcd(arg, htd)
             htd.setValue(COMPRESSION_COMPACT, arg[COMPRESSION_COMPACT]) if arg[COMPRESSION_COMPACT]
             htd.addFamily(hcd(arg, htd))
-
-            # bulkload also in the hash?
-            if (arg.has_key?(BULKLOAD))
-              check_bulkload(table_name, arg, htd)
-            end
-
           end
         end
       end
