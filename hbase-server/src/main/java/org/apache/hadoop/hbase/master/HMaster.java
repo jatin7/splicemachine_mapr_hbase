@@ -79,6 +79,7 @@ import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.mapr.BaseTableMappingRules;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
@@ -484,6 +485,10 @@ MasterServices, Server {
   public HMaster(final Configuration conf)
   throws IOException, KeeperException, InterruptedException {
     this.conf = new Configuration(conf);
+
+    // Inform mapping rules that we are in HBase master/regionserver service
+    BaseTableMappingRules.setInHBaseService();
+
     // Disable the block cache on the master
     this.conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
     FSUtils.setupShortCircuitRead(conf);

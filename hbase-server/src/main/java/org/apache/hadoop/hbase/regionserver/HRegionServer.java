@@ -99,6 +99,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.mapr.BaseTableMappingRules;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
@@ -559,6 +560,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     this.userProvider = UserProvider.instantiate(conf);
 
     FSUtils.setupShortCircuitRead(this.conf);
+
+    // Inform mapping rules that we are in HBase master/regionserver service
+    BaseTableMappingRules.setInHBaseService();
 
     // Config'ed params
     this.numRetries = this.conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
