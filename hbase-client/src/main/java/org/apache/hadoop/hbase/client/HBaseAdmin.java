@@ -29,6 +29,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
@@ -63,6 +64,11 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
+import org.apache.hadoop.hbase.client.mapr.AbstractHBaseAdmin;
+import org.apache.hadoop.hbase.client.mapr.BaseTableMappingRules;
+import org.apache.hadoop.hbase.client.mapr.BaseTableMappingRules.ClusterType;
+import org.apache.hadoop.hbase.client.mapr.GenericHFactory;
+import org.apache.hadoop.hbase.client.mapr.TableMappingRulesFactory;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
@@ -140,6 +146,7 @@ import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.MapRUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
@@ -160,6 +167,23 @@ import com.google.protobuf.ServiceException;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class HBaseAdmin implements Abortable, Closeable {
+  public static final String HBASE_ADMIN_CONNECT_AT_CONSTRUCTION = "hbase.admin.connect.at.construction";
+
+  private static final GenericHFactory<AbstractHBaseAdmin> adminFactory_ =
+      new GenericHFactory<AbstractHBaseAdmin>();
+  private static final AtomicBoolean balancer_ = new AtomicBoolean();
+
+  private volatile boolean connected_ = false;
+  private volatile boolean isHbaseAvailable_ = true;
+  private volatile AbstractHBaseAdmin maprHBaseAdmin_ = null;
+  private volatile Throwable hbaseException_ = null;
+  private BaseTableMappingRules tableMappingRule_;
+
+  abstract class HBaseConnector {
+    abstract void connect() throws ZooKeeperConnectionException, MasterNotRunningException, IOException;
+  }
+  private final HBaseConnector hbaseConnector_;
+
   private static final Log LOG = LogFactory.getLog(HBaseAdmin.class);
 
   // We use the implementation class rather then the interface because we
@@ -167,12 +191,12 @@ public class HBaseAdmin implements Abortable, Closeable {
   private HConnection connection;
 
   private volatile Configuration conf;
-  private final long pause;
-  private final int numRetries;
+  private long pause;
+  private int numRetries;
   // Some operations can take a long time such as disable of big table.
   // numRetries is for 'normal' stuff... Multiply by this factor when
   // want to wait a long time.
-  private final int retryLongerMultiplier;
+  private int retryLongerMultiplier;
   private boolean aborted;
   private boolean cleanupConnectionOnClose = false; // close the connection in close()
   private boolean closed = false;
@@ -182,18 +206,54 @@ public class HBaseAdmin implements Abortable, Closeable {
   /**
    * Constructor.
    * See {@link #HBaseAdmin(HConnection connection)}
+   * <p><b>MapR Notes: </b>Unlike the Apache version, a connection to
+   * HBase services are not immediately established but delayed until
+   * an API is invoked which requires such connection. As a result
+   * {@link MasterNotRunningException} or {@link ZooKeeperConnectionException}
+   * will not be thrown if HBase services are unavailable<p>If your
+   * application logic requires the connection to be established (and
+   * exception be thrown) in the constructor, set
+   * <code>hbase.admin.connect.at.construction</code> to <code>true</code>.<p>
    *
    * @param c Configuration object. Copied internally.
    */
-  public HBaseAdmin(Configuration c)
+  public HBaseAdmin(final Configuration c)
   throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
     // Will not leak connections, as the new implementation of the constructor
     // does not throw exceptions anymore.
-    this(HConnectionManager.getConnection(new Configuration(c)));
+    hbaseConnector_ = new HBaseConnector() {
+      @Override
+      void connect() throws ZooKeeperConnectionException, MasterNotRunningException, IOException {
+        connectWithConfiguration(c);
+      }
+    };
+    commonInit(c);
+  }
+  void connectWithConfiguration(Configuration c)
+      throws ZooKeeperConnectionException, MasterNotRunningException, IOException {
+    this.conf = new Configuration(c);
+    this.connection = HConnectionManager.getConnection(this.conf);
     this.cleanupConnectionOnClose = true;
+
+    this.pause = this.conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
+        HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+    this.numRetries = this.conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+        HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+    this.retryLongerMultiplier = this.conf.getInt(
+        "hbase.client.retries.longer.multiplier", 10);
+    this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(this.conf);
   }
 
  /**
+  * <p><b>MapR Notes: </b>Unlike the Apache version, a connection to
+  * HBase services are not immediately established but delayed until
+  * an API is invoked which requires such connection. As a result
+  * {@link MasterNotRunningException} or {@link ZooKeeperConnectionException}
+  * will not be thrown if HBase services are unavailable<p>If your
+  * application logic requires the connection to be established (and
+  * exception be thrown) in the constructor, set
+  * <code>hbase.admin.connect.at.construction</code> to <code>true</code>.<p>
+  *
   * Constructor for externally managed HConnections.
   * The connection to master will be created when required by admin functions.
   *
@@ -201,8 +261,20 @@ public class HBaseAdmin implements Abortable, Closeable {
   * @throws MasterNotRunningException, ZooKeeperConnectionException are not
   *  thrown anymore but kept into the interface for backward api compatibility
   */
-  public HBaseAdmin(HConnection connection)
+  public HBaseAdmin(final HConnection connection)
       throws MasterNotRunningException, ZooKeeperConnectionException {
+    // we want to delay connection to HBase until it is actually
+    // required since in a pure M7 world there won't be any HBase
+    hbaseConnector_ = new HBaseConnector() {
+      @Override
+      void connect() throws ZooKeeperConnectionException, MasterNotRunningException, IOException {
+        connectWithHConnection(connection);
+      }
+    };
+    commonInit(connection.getConfiguration());
+  }
+  private void connectWithHConnection(HConnection connection)
+      throws MasterNotRunningException, ZooKeeperConnectionException  {
     this.conf = connection.getConfiguration();
     this.connection = connection;
 
@@ -213,6 +285,144 @@ public class HBaseAdmin implements Abortable, Closeable {
     this.retryLongerMultiplier = this.conf.getInt(
         "hbase.client.retries.longer.multiplier", 10);
     this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(this.conf);
+  }
+
+  private synchronized boolean ensureConnectedToHBase()
+      throws ZooKeeperConnectionException, MasterNotRunningException {
+    return ensureConnectedToHBase(true);
+  }
+
+  /**
+   *
+   * @param throwException if <code>true</code>, re-throws HBase connection
+   *          exception, if any.
+   * @return true if a connection to Apache HBase services was successful.
+   * @throws ZooKeeperConnectionException
+   * @throws MasterNotRunningException
+   */
+  private synchronized boolean ensureConnectedToHBase(boolean throwException)
+      throws ZooKeeperConnectionException, MasterNotRunningException {
+    if (!connected_) {
+      if (tableMappingRule_.getClusterType() == ClusterType.MAPR_ONLY) {
+        if (throwException) {
+          throw new MasterNotRunningException("This client is configured as MapR only.");
+        }
+        return false;
+      }
+
+      // try to connect to HBase only the first time. if connection fails,
+      // remember it (and the exception) for subsequent calls.
+      if (isHbaseAvailable_) {
+        try {
+          hbaseConnector_.connect();
+          return connected_ = true;
+        } catch (Throwable e) {
+          hbaseException_ = e;
+        } finally {
+          isHbaseAvailable_ = connected_;
+        }
+      }
+      // handle error
+      if (throwException) {
+        // damn you, checked exceptions :(
+        if (hbaseException_ instanceof RuntimeException) {
+          throw (RuntimeException) hbaseException_;
+        } else if (hbaseException_ instanceof ZooKeeperConnectionException) {
+          throw (ZooKeeperConnectionException) hbaseException_;
+        } else {
+          if (!(hbaseException_ instanceof MasterNotRunningException)) {
+            hbaseException_ = new MasterNotRunningException().initCause(hbaseException_);
+          }
+          throw (MasterNotRunningException) hbaseException_;
+        }
+      }
+      return false;
+    }
+    return true;
+  }
+
+  private boolean checkIfMapRDefault(boolean connectToHBaseOtherwise)
+      throws ZooKeeperConnectionException, MasterNotRunningException {
+    if (tableMappingRule_.isMapRDefault()) {
+      return true;
+    }
+    if (connectToHBaseOtherwise) {
+      ensureConnectedToHBase();
+    }
+    return false;
+  }
+
+  /**
+   * Evaluate if the table qualifies as a MapR table according to namespace
+   * mapping rules and if not, optionally attempt to connect to HBase service.
+   * @param tableName
+   * @param connectToHBaseOtherwise
+   * @return
+   * @throws MasterNotRunningException
+   * @throws ZooKeeperConnectionException
+   */
+  private boolean checkIfMapRTable(TableName tableName, boolean connectToHBaseOtherwise)
+      throws ZooKeeperConnectionException, MasterNotRunningException {
+    if (tableMappingRule_.isMapRTable(tableName)) {
+      return true;
+    }
+    if (connectToHBaseOtherwise) {
+      ensureConnectedToHBase();
+    }
+    return false;
+  }
+
+  /**
+   * Evaluate if the table qualifies as a MapR table according to namespace
+   * mapping rules and if not, optionally attempt to connect to HBase service.
+   * @param tableName
+   * @param connectToHBaseOtherwise
+   * @return
+   * @throws MasterNotRunningException
+   * @throws ZooKeeperConnectionException
+   */
+  private boolean checkIfMapRTable(String tableName, boolean connectToHBaseOtherwise)
+      throws ZooKeeperConnectionException, MasterNotRunningException {
+    if (tableMappingRule_.isMapRTable(HRegionInfo.getTableName(tableName))) {
+      return true;
+    }
+    if (connectToHBaseOtherwise) {
+      ensureConnectedToHBase();
+    }
+    return false;
+  }
+
+  /**
+   * Evaluate if the table qualifies as a MapR table according to namespace
+   * mapping rules and if not, optionally attempt to connect to HBase service.
+   * @param tableName
+   * @param connectToHBaseOtherwise
+   * @return
+   * @throws MasterNotRunningException
+   * @throws ZooKeeperConnectionException
+   */
+  private boolean checkIfMapRTable(byte[] tableName, boolean connectToHBaseOtherwise)
+      throws ZooKeeperConnectionException, MasterNotRunningException {
+    return checkIfMapRTable(Bytes.toString(tableName), connectToHBaseOtherwise);
+  }
+
+  private void commonInit(Configuration c)
+      throws ZooKeeperConnectionException, MasterNotRunningException {
+    this.conf = c;
+    try {
+      tableMappingRule_ = TableMappingRulesFactory.create(conf);
+      if (tableMappingRule_.getClusterType() != ClusterType.HBASE_ONLY) {
+        maprHBaseAdmin_ = adminFactory_.getImplementorInstance(
+          conf.get("hbaseadmin.impl.mapr", "com.mapr.fs.hbase.HBaseAdminImpl"),
+          new Object[] {conf, tableMappingRule_},
+          new Class[] {Configuration.class, BaseTableMappingRules.class});
+      }
+    } catch (Exception e) {
+      throw (e instanceof RuntimeException) ? (RuntimeException)e : new RuntimeException(e);
+    }
+    if (c.getBoolean(HBASE_ADMIN_CONNECT_AT_CONSTRUCTION, false)) {
+      ensureConnectedToHBase();
+    }
   }
 
   /**
@@ -251,8 +461,18 @@ public class HBaseAdmin implements Abortable, Closeable {
     return this.aborted;
   }
 
-  /** @return HConnection used by this object. */
+  /**
+   * <p><b>MapR Notes: </b>Do not call if HBase services are not installed
+   * and configured in your cluster. It will return <code>null</code> after
+   * trying, and failing, to connect to HBase services.<p>
+   *
+   * @return HConnection used by this object. */
   public HConnection getConnection() {
+    try {
+      ensureConnectedToHBase();
+    } catch (IOException e) {
+      connection = null;
+    }
     return connection;
   }
 
@@ -263,6 +483,15 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public boolean isMasterRunning()
   throws MasterNotRunningException, ZooKeeperConnectionException {
+    int numRetries = this.conf.getInt("hbase.client.retries.number", 10);
+    try {
+      this.conf.setInt("hbase.client.retries.number",
+          this.conf.getInt("hbase.client.retries.number.alternate", 1));
+      ensureConnectedToHBase();
+    } finally {
+      this.conf.setInt("hbase.client.retries.number", numRetries);
+      this.numRetries = numRetries;
+    }
     return connection.isMasterRunning();
   }
 
@@ -271,8 +500,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @return True if table exists already.
    * @throws IOException
    */
-  public boolean tableExists(final TableName tableName)
+  public boolean tableExists(TableName tableName)
   throws IOException {
+    if (checkIfMapRTable(tableName, true)) {
+      return maprHBaseAdmin_.tableExists(tableName.getAliasAsString());
+    }
+    tableName = MapRUtil.adjustTableName(tableName);
     boolean b = false;
     CatalogTracker ct = getCatalogTracker();
     try {
@@ -304,6 +537,9 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public HTableDescriptor[] listTables() throws IOException {
+    if (checkIfMapRDefault(false) || !ensureConnectedToHBase(false)) {
+      return maprHBaseAdmin_.listTables();
+    }
     return this.connection.listTables();
   }
 
@@ -316,6 +552,15 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @see #listTables()
    */
   public HTableDescriptor[] listTables(Pattern pattern) throws IOException {
+    String regex = pattern.pattern();
+    if (checkIfMapRTable(regex, false) || !ensureConnectedToHBase(false)) {
+      return maprHBaseAdmin_.listTables(regex );
+    }
+
+    regex = MapRUtil.adjustTableNameString(regex);
+    if (!regex.equals(pattern.pattern())) {
+      pattern = Pattern.compile(regex);
+    }
     List<HTableDescriptor> matched = new LinkedList<HTableDescriptor>();
     HTableDescriptor[] tables = listTables();
     for (HTableDescriptor table : tables) {
@@ -345,6 +590,9 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   @Deprecated
   public String[] getTableNames() throws IOException {
+    if (checkIfMapRDefault(false) || !ensureConnectedToHBase(false)) {
+      return maprHBaseAdmin_.getTableNames();
+    }
     return this.connection.getTableNames();
   }
 
@@ -356,6 +604,9 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   @Deprecated
   public String[] getTableNames(Pattern pattern) throws IOException {
+    if (checkIfMapRTable(pattern.pattern(), true)) {
+      return maprHBaseAdmin_.getTableNames(pattern.pattern());
+    }
     List<String> matched = new ArrayList<String>();
     for (String name: this.connection.getTableNames()) {
       if (pattern.matcher(name).matches()) {
@@ -373,6 +624,9 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   @Deprecated
   public String[] getTableNames(String regex) throws IOException {
+    if (checkIfMapRTable(regex, true)) {
+      return maprHBaseAdmin_.getTableNames(regex);
+    }
     return getTableNames(Pattern.compile(regex));
   }
 
@@ -392,8 +646,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws TableNotFoundException
    * @throws IOException if a remote or network exception occurs
    */
-  public HTableDescriptor getTableDescriptor(final TableName tableName)
+  public HTableDescriptor getTableDescriptor(TableName tableName)
   throws TableNotFoundException, IOException {
+    if (checkIfMapRTable(tableName, true)) {
+      return maprHBaseAdmin_.getTableDescriptor(tableName.getAliasAsString());
+    }
+    tableName = MapRUtil.adjustTableName(tableName);
     return this.connection.getHTableDescriptor(tableName);
   }
 
@@ -492,6 +750,9 @@ public class HBaseAdmin implements Abortable, Closeable {
   throws IOException {
     try {
       createTableAsync(desc, splitKeys);
+      if (checkIfMapRTable(desc.getTableName(), false)) {
+        return;
+      }
     } catch (SocketTimeoutException ste) {
       LOG.warn("Creating " + desc.getTableName() + " took too long", ste);
     }
@@ -580,6 +841,11 @@ public class HBaseAdmin implements Abortable, Closeable {
     final HTableDescriptor desc, final byte [][] splitKeys)
   throws IOException {
     desc.validate();
+    if (checkIfMapRTable(desc.getTableName(), true)) {
+      maprHBaseAdmin_.createTable(desc, splitKeys);
+      return;
+    }
+    TableName.isLegalFullyQualifiedTableName(desc.getTableName().getName());
     if(splitKeys != null && splitKeys.length > 0) {
       Arrays.sort(splitKeys, Bytes.BYTES_COMPARATOR);
       // Verify there are no duplicate split keys
@@ -623,9 +889,18 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @param tableName name of table to delete
    * @throws IOException if a remote or network exception occurs
    */
-  public void deleteTable(final TableName tableName) throws IOException {
-    boolean tableExists = true;
+  public void deleteTable(TableName tableName) throws IOException {
+    if (checkIfMapRTable(tableName, true)) {
+      maprHBaseAdmin_.deleteTable(tableName.getAliasAsString());
+      return;
+    }
+    tableName = MapRUtil.adjustTableName(tableName);
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    deleteTableInternal(tableName);
+  }
 
+  private void deleteTableInternal(final TableName tableName) throws IOException {
+    boolean tableExists = true;
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
@@ -732,6 +1007,9 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException
    */
   public HTableDescriptor[] deleteTables(Pattern pattern) throws IOException {
+    if (checkIfMapRTable(pattern.pattern(), true)) {
+      return maprHBaseAdmin_.deleteTables(pattern.pattern());
+    }
     List<HTableDescriptor> failed = new LinkedList<HTableDescriptor>();
     for (HTableDescriptor table : listTables(pattern)) {
       try {
@@ -786,6 +1064,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    *    table is not enabled after the retries period.
    */
   private void waitUntilTableIsEnabled(final TableName tableName) throws IOException {
+    if (checkIfMapRTable(tableName, true)) {
+      // MapR table are enabled synchronously.
+      return;
+    }
+
     boolean enabled = false;
     long start = EnvironmentEdgeManager.currentTimeMillis();
     for (int tries = 0; tries < (this.numRetries * this.retryLongerMultiplier); tries++) {
@@ -829,9 +1112,18 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException
    * @since 0.90.0
    */
-  public void enableTableAsync(final TableName tableName)
+  public void enableTableAsync(TableName tableName)
   throws IOException {
+    if (checkIfMapRTable(tableName, true)) {
+      maprHBaseAdmin_.enableTable(tableName.getAliasAsString());
+      return;
+    }
+    tableName = MapRUtil.adjustTableName(tableName);
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    enableTableAsyncInternal(tableName);
+  }
+  private void enableTableAsyncInternal(final TableName tableName)
+  throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
@@ -880,6 +1172,9 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException
    */
   public HTableDescriptor[] enableTables(Pattern pattern) throws IOException {
+    if (checkIfMapRTable(pattern.pattern(), true)) {
+      return maprHBaseAdmin_.enableTables(pattern.pattern());
+    }
     List<HTableDescriptor> failed = new LinkedList<HTableDescriptor>();
     for (HTableDescriptor table : listTables(pattern)) {
       if (isTableDisabled(table.getTableName())) {
@@ -907,8 +1202,17 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @see #isTableEnabled(byte[])
    * @since 0.90.0
    */
-  public void disableTableAsync(final TableName tableName) throws IOException {
+  public void disableTableAsync(TableName tableName) throws IOException {
+    if (checkIfMapRTable(tableName, true)) {
+      maprHBaseAdmin_.disableTable(tableName.getAliasAsString());
+      return;
+    }
+    tableName = MapRUtil.adjustTableName(tableName);
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    disableTableAsyncInternal(tableName);
+  }
+  private void disableTableAsyncInternal(final TableName tableName)
+  throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
@@ -939,8 +1243,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    * TableNotFoundException means the table doesn't exist.
    * TableNotEnabledException means the table isn't in enabled state.
    */
-  public void disableTable(final TableName tableName)
+  public void disableTable(TableName tableName)
   throws IOException {
+   if (checkIfMapRTable(tableName, true)) {
+      maprHBaseAdmin_.disableTable(tableName.getAliasAsString());
+      return;
+    }
     disableTableAsync(tableName);
     // Wait until table is disabled
     boolean disabled = false;
@@ -1008,6 +1316,9 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException
    */
   public HTableDescriptor[] disableTables(Pattern pattern) throws IOException {
+    if (checkIfMapRTable(pattern.pattern(), true)) {
+      return maprHBaseAdmin_.disableTables(pattern.pattern());
+    }
     List<HTableDescriptor> failed = new LinkedList<HTableDescriptor>();
     for (HTableDescriptor table : listTables(pattern)) {
       if (isTableEnabled(table.getTableName())) {
@@ -1038,6 +1349,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public boolean isTableEnabled(TableName tableName) throws IOException {
+    if (checkIfMapRTable(tableName, true)) {
+      return maprHBaseAdmin_.isTableEnabled(tableName.getAliasAsString());
+    }
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    tableName = MapRUtil.adjustTableName(tableName);
     checkTableExistence(tableName);
     return connection.isTableEnabled(tableName);
   }
@@ -1058,6 +1374,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public boolean isTableDisabled(TableName tableName) throws IOException {
+    if (checkIfMapRTable(tableName, true)) {
+      return maprHBaseAdmin_.isTableDisabled(tableName.getAliasAsString());
+    }
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    tableName = MapRUtil.adjustTableName(tableName);
     checkTableExistence(tableName);
     return connection.isTableDisabled(tableName);
   }
@@ -1076,6 +1397,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public boolean isTableAvailable(TableName tableName) throws IOException {
+    if (checkIfMapRTable(tableName, true)) {
+      return maprHBaseAdmin_.isTableAvailable(tableName.getAliasAsString());
+    }
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    tableName = MapRUtil.adjustTableName(tableName);
     return connection.isTableAvailable(tableName);
   }
 
@@ -1101,6 +1427,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public boolean isTableAvailable(TableName tableName,
                                   byte[][] splitKeys) throws IOException {
+    if (checkIfMapRTable(tableName, true)) {
+      return maprHBaseAdmin_.isTableAvailable(tableName.getAliasAsString(), splitKeys);
+    }
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    tableName = MapRUtil.adjustTableName(tableName);
     return connection.isTableAvailable(tableName, splitKeys);
   }
 
@@ -1115,6 +1446,8 @@ public class HBaseAdmin implements Abortable, Closeable {
   }
 
   /**
+   * <b>MapR Notes: </b>For MapR tables, both values will always be 0.<p>
+   *
    * Get the status of alter command - indicates how many regions have received
    * the updated schema Asynchronous operation.
    *
@@ -1125,7 +1458,18 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException
    *           if a remote or network exception occurs
    */
-  public Pair<Integer, Integer> getAlterStatus(final TableName tableName)
+  public Pair<Integer, Integer> getAlterStatus(TableName tableName)
+  throws IOException {
+    if (checkIfMapRTable(tableName, true)) {
+      // FIXME Revisit if we need to return tablet count
+      return new Pair<Integer, Integer>(0, 0);
+    }
+
+    tableName = MapRUtil.adjustTableName(tableName);
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    return getAlterStatusInternal(tableName);
+  }
+  private Pair<Integer, Integer> getAlterStatusInternal(final TableName tableName)
   throws IOException {
     return executeCallable(new MasterCallable<Pair<Integer, Integer>>(getConnection()) {
       @Override
@@ -1165,7 +1509,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @param column column descriptor of column to be added
    * @throws IOException if a remote or network exception occurs
    */
-  public void addColumn(final byte[] tableName, HColumnDescriptor column)
+  public void addColumn(byte[] tableName, HColumnDescriptor column)
   throws IOException {
     addColumn(TableName.valueOf(tableName), column);
   }
@@ -1179,7 +1523,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @param column column descriptor of column to be added
    * @throws IOException if a remote or network exception occurs
    */
-  public void addColumn(final String tableName, HColumnDescriptor column)
+  public void addColumn(String tableName, HColumnDescriptor column)
   throws IOException {
     addColumn(TableName.valueOf(tableName), column);
   }
@@ -1192,9 +1536,20 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @param column column descriptor of column to be added
    * @throws IOException if a remote or network exception occurs
    */
-  public void addColumn(final TableName tableName, final HColumnDescriptor column)
+  public void addColumn(TableName tableName, final HColumnDescriptor column)
   throws IOException {
     column.validate();
+    if (checkIfMapRTable(tableName, true)) {
+      maprHBaseAdmin_.addColumn(tableName.getAliasAsString(), column);
+      return;
+    }
+
+    tableName = MapRUtil.adjustTableName(tableName);
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    addColumnInternal(tableName, column);
+  }
+  private void addColumnInternal(final TableName tableName, final HColumnDescriptor column)
+  throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
@@ -1239,7 +1594,19 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @param columnName name of column to be deleted
    * @throws IOException if a remote or network exception occurs
    */
-  public void deleteColumn(final TableName tableName, final byte [] columnName)
+  public void deleteColumn(TableName tableName, final byte [] columnName)
+  throws IOException {
+    if (checkIfMapRTable(tableName, true)) {
+      maprHBaseAdmin_.deleteColumn(
+        tableName.getAliasAsString(), Bytes.toString(columnName));
+      return;
+    }
+
+    tableName = MapRUtil.adjustTableName(tableName);
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    deleteColumnInternal(tableName, columnName);
+  }
+  private void deleteColumnInternal(final TableName tableName, final byte [] columnName)
   throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
@@ -1287,9 +1654,21 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @param descriptor new column descriptor to use
    * @throws IOException if a remote or network exception occurs
    */
-  public void modifyColumn(final TableName tableName, final HColumnDescriptor descriptor)
+  public void modifyColumn(TableName tableName, final HColumnDescriptor descriptor)
   throws IOException {
     descriptor.validate();
+    if (checkIfMapRTable(tableName, true)) {
+      maprHBaseAdmin_.modifyColumn(tableName.getAliasAsString(), descriptor);
+      return;
+    }
+
+    tableName = MapRUtil.adjustTableName(tableName);
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    modifyColumnInternal(tableName, descriptor);
+  }
+  private void modifyColumnInternal(final TableName tableName,
+                                    final HColumnDescriptor descriptor)
+  throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
@@ -1325,6 +1704,10 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void closeRegion(final byte [] regionname, final String serverName)
   throws IOException {
+    if (checkIfMapRTable(regionname, true)) {
+      maprHBaseAdmin_.closeRegion(regionname, serverName);
+      return;
+    }
     CatalogTracker ct = getCatalogTracker();
     try {
       if (serverName != null) {
@@ -1372,6 +1755,10 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public boolean closeRegionWithEncodedRegionName(final String encodedRegionName,
       final String serverName) throws IOException {
+    if (checkIfMapRTable(encodedRegionName, true)) {
+      maprHBaseAdmin_.closeRegionWithEncodedRegionName(encodedRegionName, serverName);
+      return true;
+    }
     if (null == serverName || ("").equals(serverName.trim())) {
       throw new IllegalArgumentException(
           "The servername cannot be null or empty.");
@@ -1402,6 +1789,10 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void closeRegion(final ServerName sn, final HRegionInfo hri)
   throws IOException {
+    if (checkIfMapRTable(hri.getRegionName(), true)) {
+      maprHBaseAdmin_.closeRegion(sn, hri);
+      return;
+    }
     AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     // Close the region without updating zk state.
     ProtobufUtil.closeRegion(admin, sn, hri.getRegionName(), false);
@@ -1437,9 +1828,14 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
-  public void flush(final byte[] tableNameOrRegionName)
+  public void flush(byte[] tableNameOrRegionName)
   throws IOException, InterruptedException {
+    if (checkIfMapRTable(tableNameOrRegionName, true)) {
+      maprHBaseAdmin_.flush(tableNameOrRegionName);
+      return;
+    }
     CatalogTracker ct = getCatalogTracker();
+    tableNameOrRegionName = MapRUtil.adjustTableName(tableNameOrRegionName);
     try {
       Pair<HRegionInfo, ServerName> regionServerPair
         = getRegion(tableNameOrRegionName, ct);
@@ -1604,10 +2000,15 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
-  private void compact(final byte[] tableNameOrRegionName,
+  private void compact(byte[] tableNameOrRegionName,
     final byte[] columnFamily,final boolean major)
   throws IOException, InterruptedException {
+    if (checkIfMapRTable(tableNameOrRegionName, true)) {
+      maprHBaseAdmin_.compact(tableNameOrRegionName, columnFamily, major);
+      return;
+    }
     CatalogTracker ct = getCatalogTracker();
+    tableNameOrRegionName = MapRUtil.adjustTableName(tableNameOrRegionName);
     try {
       Pair<HRegionInfo, ServerName> regionServerPair
         = getRegion(tableNameOrRegionName, ct);
@@ -1645,6 +2046,10 @@ public class HBaseAdmin implements Abortable, Closeable {
   private void compact(final ServerName sn, final HRegionInfo hri,
       final boolean major, final byte [] family)
   throws IOException {
+    if (checkIfMapRTable(hri.getRegionName(), true)) {
+      maprHBaseAdmin_.compact(sn, hri, major, family);
+      return;
+    }
     AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     CompactRegionRequest request =
       RequestConverter.buildCompactRegionRequest(hri.getRegionName(), major, family);
@@ -1672,6 +2077,10 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void move(final byte [] encodedRegionName, final byte [] destServerName)
   throws HBaseIOException, MasterNotRunningException, ZooKeeperConnectionException {
+    if (checkIfMapRTable(encodedRegionName, true)) {
+      maprHBaseAdmin_.move(encodedRegionName, destServerName);
+      return;
+    }
     MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
     try {
       MoveRegionRequest request =
@@ -1699,6 +2108,10 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void assign(final byte[] regionName) throws MasterNotRunningException,
       ZooKeeperConnectionException, IOException {
+    if (checkIfMapRTable(regionName, true)) {
+      maprHBaseAdmin_.assign(regionName);
+      return;
+    }
     final byte[] toBeAssigned = getRegionName(regionName);
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
@@ -1727,6 +2140,10 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void unassign(final byte [] regionName, final boolean force)
   throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
+    if (checkIfMapRTable(regionName, true)) {
+      maprHBaseAdmin_.unassign(regionName, force);
+      return;
+    }
     final byte[] toBeUnassigned = getRegionName(regionName);
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
@@ -1751,8 +2168,13 @@ public class HBaseAdmin implements Abortable, Closeable {
    *          Region to offline.
    * @throws IOException
    */
-  public void offline(final byte [] regionName)
-  throws IOException {
+  public void offline(byte [] regionName)
+  throws IOException, ZooKeeperConnectionException {
+    if (checkIfMapRTable(regionName, true)) {
+      maprHBaseAdmin_.offline(regionName);
+      return;
+    }
+
     MasterKeepAliveConnection master = connection.getKeepAliveMasterService();
     try {
       master.offlineRegion(null,RequestConverter.buildOfflineRegionRequest(regionName));
@@ -1771,6 +2193,9 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public boolean setBalancerRunning(final boolean on, final boolean synchronous)
   throws MasterNotRunningException, ZooKeeperConnectionException {
+    if (checkIfMapRDefault(true)) {
+      return balancer_.getAndSet(on);
+    }
     MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
     try {
       SetBalancerRunningRequest req =
@@ -1801,6 +2226,9 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public boolean balancer()
   throws MasterNotRunningException, ZooKeeperConnectionException, ServiceException {
+    if (checkIfMapRDefault(true)) {
+      return true;
+    }
     MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
     try {
       return stub.balance(null,RequestConverter.buildBalanceRequest()).getBalancerRan();
@@ -1817,7 +2245,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws MasterNotRunningException
    */
   public boolean enableCatalogJanitor(boolean enable)
-      throws ServiceException, MasterNotRunningException {
+      throws ServiceException, MasterNotRunningException, ZooKeeperConnectionException {
+    if (checkIfMapRDefault(true)) {
+      return maprHBaseAdmin_.enableCatalogJanitor(enable);
+    }
+
     MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
     try {
       return stub.enableCatalogJanitor(null,
@@ -1833,7 +2265,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws ServiceException
    * @throws MasterNotRunningException
    */
-  public int runCatalogScan() throws ServiceException, MasterNotRunningException {
+  public int runCatalogScan() throws ServiceException, MasterNotRunningException, ZooKeeperConnectionException {
+    if (checkIfMapRDefault(true)) {
+      return maprHBaseAdmin_.runCatalogScan();
+    }
+
     MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
     try {
       return stub.runCatalogScan(null,
@@ -1848,7 +2284,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws ServiceException
    * @throws org.apache.hadoop.hbase.MasterNotRunningException
    */
-  public boolean isCatalogJanitorEnabled() throws ServiceException, MasterNotRunningException {
+  public boolean isCatalogJanitorEnabled() throws ServiceException, MasterNotRunningException, ZooKeeperConnectionException {
+    if (checkIfMapRDefault(true)) {
+      return maprHBaseAdmin_.isCatalogJanitorEnabled();
+    }
+
     MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
     try {
       return stub.isCatalogJanitorEnabled(null,
@@ -1897,6 +2337,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    * Split a table or an individual region.
    * Asynchronous operation.
    *
+   * <p><b>MapR Notes:</b> For MapR tables, the parameter
+   * {@code tableNameOrRegionName} should take the form
+   * {@code "<table_path>,<region_fid>"}. For example:
+   * {@code "/user/admin/usertable,2085.39.131212"}.<p>
+   *
    * @param tableNameOrRegionName table or region to split
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
@@ -1910,6 +2355,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    * Split a table or an individual region.  Implicitly finds an optimal split
    * point.  Asynchronous operation.
    *
+   * <p><b>MapR Notes:</b> For MapR tables, the parameter
+   * {@code tableNameOrRegionName} should take the form
+   * {@code "<table_path>,<region_fid>"}. For example:
+   * {@code "/user/admin/usertable,2085.39.131212"}.<p>
+   *
    * @param tableNameOrRegionName table to region to split
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
@@ -1919,6 +2369,21 @@ public class HBaseAdmin implements Abortable, Closeable {
     split(tableNameOrRegionName, null);
   }
 
+  /**
+   * Split a table or an individual region.
+   * Asynchronous operation.
+   *
+   * <p><b>MapR Notes:</b> For MapR tables, the parameter
+   * {@code tableNameOrRegionName} should take the form
+   * {@code "<table_path>,<region_fid>"}. For example:
+   * {@code "/user/admin/usertable,2085.39.131212"}.
+   * The parameter {@code splitPoint} is currently not supported.<p>
+   *
+   * @param tableNameOrRegionName table to region to split
+   * @param splitPoint the explicit position to split on
+   * @throws IOException if a remote or network exception occurs
+   * @throws InterruptedException interrupt exception occurred
+   */
   public void split(final String tableNameOrRegionName,
     final String splitPoint) throws IOException, InterruptedException {
     split(Bytes.toBytes(tableNameOrRegionName), Bytes.toBytes(splitPoint));
@@ -1928,14 +2393,25 @@ public class HBaseAdmin implements Abortable, Closeable {
    * Split a table or an individual region.
    * Asynchronous operation.
    *
+   * <p><b>MapR Notes:</b> For MapR tables, the parameter
+   * {@code tableNameOrRegionName} should take the form
+   * {@code "<table_path>,<region_fid>"}. For example:
+   * {@code "/user/admin/usertable,2085.39.131212"}.
+   * The parameter {@code splitPoint} is currently not supported.<p>
+   *
    * @param tableNameOrRegionName table to region to split
    * @param splitPoint the explicit position to split on
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException interrupt exception occurred
    */
-  public void split(final byte[] tableNameOrRegionName,
+  public void split(byte[] tableNameOrRegionName,
       final byte [] splitPoint) throws IOException, InterruptedException {
+    if (checkIfMapRTable(tableNameOrRegionName, true)) {
+      maprHBaseAdmin_.split(tableNameOrRegionName, splitPoint);
+      return;
+    }
     CatalogTracker ct = getCatalogTracker();
+    tableNameOrRegionName = MapRUtil.adjustTableName(tableNameOrRegionName);
     try {
       Pair<HRegionInfo, ServerName> regionServerPair
         = getRegion(tableNameOrRegionName, ct);
@@ -1987,7 +2463,18 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @param htd modified description of the table
    * @throws IOException if a remote or network exception occurs
    */
-  public void modifyTable(final TableName tableName, final HTableDescriptor htd)
+  public void modifyTable(TableName tableName, final HTableDescriptor htd)
+  throws IOException {
+    if (checkIfMapRTable(tableName, true)) {
+      maprHBaseAdmin_.modifyTable(tableName.getAliasAsString(), htd);
+      return;
+    }
+    tableName = MapRUtil.adjustTableName(tableName);
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    modifyTableInternal(tableName, htd);
+  }
+
+  private void modifyTableInternal(final TableName tableName, final HTableDescriptor htd)
   throws IOException {
     if (!tableName.equals(htd.getTableName())) {
       throw new IllegalArgumentException("the specified table name '" + tableName +
@@ -2107,6 +2594,10 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public synchronized void shutdown() throws IOException {
+    if (checkIfMapRDefault(true)) {
+      LOG.warn("shutdown() called for a MapR cluster, silently ignoring.");
+      return;
+    }
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
@@ -2123,6 +2614,10 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public synchronized void stopMaster() throws IOException {
+    if (checkIfMapRDefault(true)) {
+      LOG.warn("stopMaster() called for a MapR cluster, silently ignoring.");
+      return;
+    }
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
@@ -2140,6 +2635,10 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public synchronized void stopRegionServer(final String hostnamePort)
   throws IOException {
+    if (checkIfMapRDefault(true)) {
+      LOG.warn("stopRegionServer() called for a MapR cluster, silently ignoring.");
+      return;
+    }
     String hostname = Addressing.parseHostname(hostnamePort);
     int port = Addressing.parsePort(hostnamePort);
     AdminService.BlockingInterface admin =
@@ -2159,6 +2658,9 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public ClusterStatus getClusterStatus() throws IOException {
+    if (!ensureConnectedToHBase(false)) {
+      return null;
+    }
     return executeCallable(new MasterCallable<ClusterStatus>(getConnection()) {
       @Override
       public ClusterStatus call() throws ServiceException {
@@ -2329,10 +2831,17 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public static void checkHBaseAvailable(Configuration conf)
     throws MasterNotRunningException, ZooKeeperConnectionException, ServiceException, IOException {
+    //  No-op if MapR is the default engine
+    try {
+      if(TableMappingRulesFactory.create(conf).getClusterType() == ClusterType.MAPR_ONLY) {
+        return;
+      }
+    } catch (IOException e) { throw new RuntimeException(e); }
     Configuration copyOfConf = HBaseConfiguration.create(conf);
 
     // We set it to make it fail as soon as possible if HBase is not available
     copyOfConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
+    copyOfConf.setBoolean(HBASE_ADMIN_CONNECT_AT_CONSTRUCTION, true);
     copyOfConf.setInt("zookeeper.recovery.retry", 0);
 
     HConnectionManager.HConnectionImplementation connection
@@ -2377,8 +2886,14 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @return Ordered list of {@link HRegionInfo}.
    * @throws IOException
    */
-  public List<HRegionInfo> getTableRegions(final TableName tableName)
+  public List<HRegionInfo> getTableRegions(TableName tableName)
   throws IOException {
+    if (checkIfMapRTable(tableName, true)) {
+      return maprHBaseAdmin_.getTableRegions(tableName.getQualifier());
+    }
+
+    tableName = MapRUtil.adjustTableName(tableName);
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
     CatalogTracker ct = getCatalogTracker();
     List<HRegionInfo> Regions = null;
     try {
@@ -2410,7 +2925,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public HTableDescriptor[] getTableDescriptorsByTableName(List<TableName> tableNames)
   throws IOException {
-    return this.connection.getHTableDescriptorsByTableName(tableNames);
+    List<HTableDescriptor> list = new ArrayList<HTableDescriptor>();
+    for (TableName tableName : tableNames) {
+      list.add(getTableDescriptor(tableName));
+    }
+    return list.toArray(new HTableDescriptor[list.size()]);
   }
 
   /**
@@ -2443,6 +2962,10 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
  public synchronized  byte[][] rollHLogWriter(String serverName)
       throws IOException, FailedLogCloseException {
+    if (checkIfMapRDefault(true)) {
+      LOG.warn("rollHLogWriter() called for a MapR cluster, returning null.");
+      return null;
+    }
     ServerName sn = ServerName.valueOf(serverName);
     AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     RollWALWriterRequest request = RequestConverter.buildRollWALWriterRequest();
@@ -2462,6 +2985,10 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   public String[] getMasterCoprocessors() {
     try {
+      if (checkIfMapRDefault(true)) {
+        LOG.warn("getMasterCoprocessors() called for a MapR cluster, returning empty.");
+        return new String[0];
+      }
       return getClusterStatus().getMasterCoprocessors();
     } catch (IOException e) {
       LOG.error("Could not getClusterStatus()",e);
@@ -2492,8 +3019,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws InterruptedException
    * @return the current compaction state
    */
-  public CompactionState getCompactionState(final byte[] tableNameOrRegionName)
+  public CompactionState getCompactionState(byte[] tableNameOrRegionName)
       throws IOException, InterruptedException {
+    if (checkIfMapRTable(tableNameOrRegionName, true)) {
+      return CompactionState.NONE;
+    }
+    tableNameOrRegionName = MapRUtil.adjustTableName(tableNameOrRegionName);
     CompactionState state = CompactionState.NONE;
     CatalogTracker ct = getCatalogTracker();
     try {
@@ -2665,9 +3196,15 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
    */
   public void snapshot(final String snapshotName,
-                       final TableName tableName,
+                       TableName tableName,
                       SnapshotDescription.Type type) throws IOException, SnapshotCreationException,
       IllegalArgumentException {
+    if (checkIfMapRTable(tableName, true)) {
+      throw new IllegalArgumentException("snapshot() called for a MapR Table.");
+    }
+
+    tableName = MapRUtil.adjustTableName(tableName);
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
     SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
     builder.setTable(tableName.getNameAsString());
     builder.setName(snapshotName);
@@ -2764,6 +3301,9 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public SnapshotResponse takeSnapshotAsync(SnapshotDescription snapshot) throws IOException,
       SnapshotCreationException {
+    if (checkIfMapRTable(snapshot.getTable(), true)) {
+      throw new IllegalArgumentException("takeSnapshotAsync() called for a MapR Table.");
+    }
     ClientSnapshotDescriptionUtils.assertSnapshotRequestIsValid(snapshot);
     final SnapshotRequest request = SnapshotRequest.newBuilder().setSnapshot(snapshot)
         .build();
@@ -2798,7 +3338,9 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public boolean isSnapshotFinished(final SnapshotDescription snapshot)
       throws IOException, HBaseSnapshotException, UnknownSnapshotException {
-
+    if (checkIfMapRTable(snapshot.getTable(), true)) {
+      throw new UnsupportedOperationException("isSnapshotFinished() called for a MapR Table.");
+    }
     return executeCallable(new MasterCallable<IsSnapshotDoneResponse>(getConnection()) {
       @Override
       public IsSnapshotDoneResponse call() throws ServiceException {
@@ -2885,6 +3427,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void restoreSnapshot(final String snapshotName, boolean takeFailSafeSnapshot)
       throws IOException, RestoreSnapshotException {
+    ensureConnectedToHBase();
     TableName tableName = null;
     for (SnapshotDescription snapshotInfo: listSnapshots()) {
       if (snapshotInfo.getName().equals(snapshotName)) {
@@ -2896,6 +3439,9 @@ public class HBaseAdmin implements Abortable, Closeable {
     if (tableName == null) {
       throw new RestoreSnapshotException(
         "Unable to find the table name for snapshot=" + snapshotName);
+    }
+    if (checkIfMapRTable(tableName, true)) {
+      throw new UnsupportedOperationException("restoreSnapshot called for a MapR Table.");
     }
 
     // The table does not exists, switch to clone.
@@ -3020,6 +3566,9 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void cloneSnapshot(final String snapshotName, final TableName tableName)
       throws IOException, TableExistsException, RestoreSnapshotException, InterruptedException {
+    if (checkIfMapRTable(tableName, true)) {
+      throw new UnsupportedOperationException("cloneSnapshot called for a MapR Table.");
+    }
     if (tableExists(tableName)) {
       throw new TableExistsException(tableName);
     }
@@ -3206,6 +3755,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a network error occurs
    */
   public List<SnapshotDescription> listSnapshots() throws IOException {
+    ensureConnectedToHBase();
     return executeCallable(new MasterCallable<List<SnapshotDescription>>(getConnection()) {
       @Override
       public List<SnapshotDescription> call() throws ServiceException {
@@ -3259,6 +3809,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public void deleteSnapshot(final String snapshotName) throws IOException {
+    ensureConnectedToHBase();
     // make sure the snapshot is possibly valid
     TableName.isLegalFullyQualifiedTableName(Bytes.toBytes(snapshotName));
     // do the delete
@@ -3288,6 +3839,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public void deleteSnapshots(final Pattern pattern) throws IOException {
+    ensureConnectedToHBase();
     List<SnapshotDescription> snapshots = listSnapshots(pattern);
     for (final SnapshotDescription snapshot : snapshots) {
       // do the delete
