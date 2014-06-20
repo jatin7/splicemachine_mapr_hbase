@@ -177,4 +177,12 @@ public class RegexStringComparator extends ByteArrayComparable {
       && this.pattern.flags() == comparator.pattern.flags()
       && this.charset.equals(comparator.charset);
   }
+
+  public String getCharset() {
+    return charset.name();
+  }
+
+  public String getPattern() {
+    return pattern.pattern();
+  }
 }
