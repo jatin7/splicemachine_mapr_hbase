@@ -87,6 +87,7 @@ public class ZKClusterId {
    * @throws KeeperException
    */
   public static UUID getUUIDForCluster(ZooKeeperWatcher zkw) throws KeeperException {
-    return UUID.fromString(readClusterIdZNode(zkw));
+    String clusterId = readClusterIdZNode(zkw);
+    return (clusterId != null) ? UUID.fromString(clusterId) : null;
   }
 }
