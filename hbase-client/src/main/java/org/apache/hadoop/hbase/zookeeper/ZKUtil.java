@@ -951,8 +951,7 @@ public class ZKUtil {
     }
 
     // Master & RSs uses hbase.zookeeper.client.*
-    return("kerberos".equalsIgnoreCase(conf.get("hbase.security.authentication")) &&
-         conf.get("hbase.zookeeper.client.keytab.file") != null);
+    return "kerberos".equalsIgnoreCase(conf.get("hbase.security.authentication"));
   }
 
   private static ArrayList<ACL> createACL(ZooKeeperWatcher zkw, String node) {
