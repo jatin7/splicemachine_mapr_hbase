@@ -607,9 +607,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void createTableAsync(
     final HTableDescriptor desc, final byte [][] splitKeys)
   throws IOException {
-    if(desc.getTableName() == null) {
-      throw new IllegalArgumentException("TableName cannot be null");
-    }
+    desc.validate();
     if(splitKeys != null && splitKeys.length > 0) {
       Arrays.sort(splitKeys, Bytes.BYTES_COMPARATOR);
       // Verify there are no duplicate split keys
@@ -1224,6 +1222,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void addColumn(final TableName tableName, final HColumnDescriptor column)
   throws IOException {
+    column.validate();
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
@@ -1318,6 +1317,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void modifyColumn(final TableName tableName, final HColumnDescriptor descriptor)
   throws IOException {
+    descriptor.validate();
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
