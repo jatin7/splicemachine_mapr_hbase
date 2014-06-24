@@ -79,6 +79,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSelector;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
+import org.apache.hadoop.hbase.util.JVM;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PoolMap;
 import org.apache.hadoop.hbase.util.PoolMap.PoolType;
@@ -892,6 +893,7 @@ public class RpcClient {
                 }
               });
             } catch (Exception ex) {
+              JVM.INSTANCE.checkJCEKeyStrength();
               if (rand == null) {
                 rand = new Random();
               }
