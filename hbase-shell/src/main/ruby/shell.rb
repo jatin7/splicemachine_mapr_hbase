@@ -17,6 +17,8 @@
 # limitations under the License.
 #
 
+require 'rbconfig'
+
 # Shell commands module
 module Shell
   @@commands = {}
@@ -71,6 +73,7 @@ module Shell
   class Shell
     attr_accessor :hbase
     attr_accessor :formatter
+    attr_accessor :usecolor
 
     @debug = false
     attr_accessor :debug
@@ -78,6 +81,10 @@ module Shell
     def initialize(hbase, formatter)
       self.hbase = hbase
       self.formatter = formatter
+      begin
+        self.usecolor = RbConfig::CONFIG['host_os'] =~ /linux|mac|cygwin|mingw32/i
+      rescue
+      end 
     end
 
     def hbase_admin
