@@ -150,6 +150,11 @@ module Shell
       print 'Version '
       command('version')
       puts
+      if m7_admin.m7_available?
+        puts "Not all HBase shell commands are applicable to MapR tables."
+        puts "Consult MapR documentation for the list of supported commands."
+        puts
+      end
     end
 
     def help_multi_command(command)
