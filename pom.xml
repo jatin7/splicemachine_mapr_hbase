@@ -684,6 +684,7 @@
               <exclude>.git/**</exclude>
               <exclude>.svn/**</exclude>
               <exclude>**/.settings/**</exclude>
+              <exclude>**/.gradle/**</exclude>
             </excludes>
           </configuration>
         </plugin>
@@ -1500,6 +1501,15 @@
       <properties>
         <build.platform>Mac_OS_X-${sun.arch.data.model}</build.platform>
       </properties>
+    </profile>
+    <profile>
+      <id>hbase-native-client</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <modules>
+        <module>hbase-native-client</module>
+      </modules>
     </profile>
     <profile>
       <id>os.windows</id>
