@@ -50,8 +50,9 @@ public class TableMappingRulesFactory {
       } catch (Throwable t) {
         Throwable cause = t.getCause();
         while (cause != null) {
-          if (cause instanceof ClassNotFoundException || cause instanceof NoClassDefFoundError) {
-            LOG.info("Could not find MapRTableMappingRules class, assuming HBase only cluster.");
+          if ((cause instanceof ClassNotFoundException || cause instanceof NoClassDefFoundError)
+              && cause.getMessage().contains("MapRTableMappingRules")) {
+            LOG.info("Could not find MapRTableMappingRules class in the classpath, assuming HBase only cluster.");
             LOG.info("If you are trying to access M7 tables, add mapr-hbase jar to your classpath.");
             LOG.debug(t.getMessage(), t);
             return (base_instance = BaseTableMappingRules.INSTANCE);
