@@ -20,7 +20,7 @@
 include Java
 
 require 'hbase/admin'
-require 'hbase/m7admin'
+require 'hbase/mapr'
 require 'hbase/table'
 require 'hbase/security'
 require 'hbase/visibility_labels'
@@ -45,8 +45,8 @@ module Hbase
       ::Hbase::Admin.new(configuration, formatter)
     end
 
-    def m7admin(formatter)
-      ::Hbase::M7Admin.new(configuration, formatter)
+    def mapr_admin(formatter)
+      ::Hbase::MapRAdmin.new(configuration, formatter)
     end
 
     # Create new one each time
