@@ -63,6 +63,10 @@ module HBaseConstants
   AUTHORIZATIONS = "AUTHORIZATIONS"
   SKIP_FLUSH = 'SKIP_FLUSH'
 
+  #MapR constants
+  PERM = "PERM"
+  EXPR = "EXPR"
+
   # Load constants from hbase java API
   def self.promote_constants(constants)
     # The constants to import are all in uppercase
