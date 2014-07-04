@@ -53,6 +53,9 @@ import org.apache.hadoop.hbase.io.hfile.AbstractHFileWriter;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.client.mapr.BaseTableMappingRules;
+import org.apache.hadoop.hbase.client.mapr.GenericHFactory;
+import org.apache.hadoop.hbase.client.mapr.TableMappingRulesFactory;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -97,6 +100,7 @@ public class HFileOutputFormat2
       "hbase.mapreduce.hfileoutputformat.blocksize";
   private static final String DATABLOCK_ENCODING_FAMILIES_CONF_KEY =
       "hbase.mapreduce.hfileoutputformat.families.datablock.encoding";
+  private static final String MAPR_TABLE_PATH_CONF_KEY = "hbase.mapreduce.hfileoutputformat.mapr.tablepath";
 
   // This constant is public since the client can modify this when setting
   // up their conf object and thus refer to this symbol.
@@ -113,11 +117,28 @@ public class HFileOutputFormat2
   static <V extends Cell> RecordWriter<ImmutableBytesWritable, V>
       createRecordWriter(final TaskAttemptContext context)
           throws IOException, InterruptedException {
+    final Configuration conf = context.getConfiguration();
+    final String tablePathName = conf.get(MAPR_TABLE_PATH_CONF_KEY);
+    if (tablePathName != null) {
+      LOG.info("detected MapR table " + tablePathName +
+               ", switching to BulkLoadRecordWriter");
+
+      Path tablePath = new Path(tablePathName);
+      try {
+        final GenericHFactory<RecordWriter<ImmutableBytesWritable, V>> recWriterFactory_ =
+          new GenericHFactory<RecordWriter<ImmutableBytesWritable, V>>();
+        return recWriterFactory_.getImplementorInstance(
+            "com.mapr.fs.BulkLoadRecordWriter",
+            new Object[] { conf, tablePath },
+            new Class[] { Configuration.class, Path.class });
+      } catch (Throwable e) {
+        GenericHFactory.handleIOException(e);
+      }
+    }
 
     // Get the path of the temporary output file
     final Path outputPath = FileOutputFormat.getOutputPath(context);
     final Path outputdir = new FileOutputCommitter(outputPath, context).getWorkPath();
-    final Configuration conf = context.getConfiguration();
     final FileSystem fs = outputdir.getFileSystem(conf);
     // These configs. are from hbase-*.xml
     final long maxsize = conf.getLong(HConstants.HREGION_MAX_FILESIZE,
@@ -272,6 +293,23 @@ public class HFileOutputFormat2
     };
   }
 
+  public static void configureMapRTablePath(Job job, String tableName)
+  throws IOException {
+    Configuration conf = job.getConfiguration();
+
+    BaseTableMappingRules tableMappingRule = 
+        TableMappingRulesFactory.create(conf);
+    if (!tableMappingRule.isMapRTable(tableName))
+      return;
+
+    Path tablePath = tableMappingRule.getMaprTablePath(tableName.getBytes());
+    conf.set(MAPR_TABLE_PATH_CONF_KEY, tablePath.toString());
+
+    TableMapReduceUtil.addDependencyJars(conf, tableMappingRule.getClass());
+    TableMapReduceUtil.addDependencyJars(job);
+    LOG.info("Configured " + MAPR_TABLE_PATH_CONF_KEY + " to " + tablePath);
+  }
+
   /*
    * Data structure to hold a Writer and amount of data written on it.
    */
@@ -380,6 +418,10 @@ public class HFileOutputFormat2
     conf.setStrings("io.serializations", conf.get("io.serializations"),
         MutationSerialization.class.getName(), ResultSerialization.class.getName(),
         KeyValueSerialization.class.getName());
+
+    // Remember the tablePath in jobConf
+    String tableName = Bytes.toString(table.getTableName());
+    configureMapRTablePath(job, tableName);
 
     // Use table's region boundaries for TOP split points.
     LOG.info("Looking up current regions for table " + Bytes.toString(table.getTableName()));
