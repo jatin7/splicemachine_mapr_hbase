@@ -58,7 +58,7 @@ module Shell
       end
 
       def mapr_admin
-        shell.mapr_admin
+        @shell.mapr_admin
       end
 
       def table(name)
