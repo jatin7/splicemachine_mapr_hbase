@@ -65,4 +65,11 @@
     <value>debug</value>
   </property>
   -->
+
+  <!-- Allows file/db client to use 64 threads -->
+  <property>
+    <name>fs.mapr.threads</name>
+    <value>64</value>
+  </property>
+
 </configuration>
