@@ -45,8 +45,8 @@ module Hbase
       ::Hbase::Admin.new(configuration, formatter)
     end
 
-    def mapr_admin(formatter)
-      ::Hbase::MapRAdmin.new(configuration, formatter)
+    def mapr_admin(shell, formatter)
+      ::Hbase::MapRAdmin.new(shell, configuration, formatter)
     end
 
     # Create new one each time

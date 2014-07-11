@@ -86,7 +86,7 @@ module Shell
     end
 
     def mapr_admin
-      @mapr_admin ||= hbase.mapr_admin(formatter)
+      @mapr_admin ||= hbase.mapr_admin(self, formatter)
     end
 
     def hbase_table(name)
