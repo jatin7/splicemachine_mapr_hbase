@@ -826,6 +826,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       maprHBaseAdmin_.createTable(desc, splitKeys);
       return;
     }
+    TableName.isLegalFullyQualifiedTableName(desc.getTableName().getName());
     if(splitKeys != null && splitKeys.length > 0) {
       Arrays.sort(splitKeys, Bytes.BYTES_COMPARATOR);
       // Verify there are no duplicate split keys
@@ -876,6 +877,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       return;
     }
 
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
@@ -1312,6 +1314,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     if (checkIfMapRTable(tableName, true)) {
       return maprHBaseAdmin_.isTableEnabled(tableName.getQualifierAsString());
     }
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
     checkTableExistence(tableName);
     return connection.isTableEnabled(tableName);
   }
@@ -1335,6 +1338,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     if (checkIfMapRTable(tableName, true)) {
       return maprHBaseAdmin_.isTableDisabled(tableName.getQualifierAsString());
     }
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
     checkTableExistence(tableName);
     return connection.isTableDisabled(tableName);
   }
@@ -1356,6 +1360,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     if (checkIfMapRTable(tableName, true)) {
       return maprHBaseAdmin_.isTableAvailable(tableName.getQualifierAsString());
     }
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
     return connection.isTableAvailable(tableName);
   }
 
@@ -1384,6 +1389,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     if (checkIfMapRTable(tableName, true)) {
       return maprHBaseAdmin_.isTableAvailable(tableName.getQualifierAsString(), splitKeys);
     }
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
     return connection.isTableAvailable(tableName, splitKeys);
   }
 
@@ -1416,6 +1422,8 @@ public class HBaseAdmin implements Abortable, Closeable {
       // FIXME Revisit if we need to return tablet count
       return new Pair<Integer, Integer>(0, 0);
     }
+
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
     return executeCallable(new MasterCallable<Pair<Integer, Integer>>(getConnection()) {
       @Override
       public Pair<Integer, Integer> call() throws ServiceException {
@@ -1488,6 +1496,8 @@ public class HBaseAdmin implements Abortable, Closeable {
       maprHBaseAdmin_.addColumn(tableName.getQualifierAsString(), column);
       return;
     }
+
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
@@ -1539,6 +1549,8 @@ public class HBaseAdmin implements Abortable, Closeable {
         tableName.getQualifierAsString(), Bytes.toString(columnName));
       return;
     }
+
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
@@ -1592,6 +1604,8 @@ public class HBaseAdmin implements Abortable, Closeable {
       maprHBaseAdmin_.modifyColumn(tableName.getQualifierAsString(), descriptor);
       return;
     }
+
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
@@ -2397,6 +2411,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         "' doesn't match with the HTD one: " + htd.getTableName());
     }
 
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
@@ -2807,6 +2822,8 @@ public class HBaseAdmin implements Abortable, Closeable {
     if (checkIfMapRTable(tableName, true)) {
       return maprHBaseAdmin_.getTableRegions(tableName.getQualifier());
     }
+
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
     CatalogTracker ct = getCatalogTracker();
     List<HRegionInfo> Regions = null;
     try {
@@ -3111,6 +3128,8 @@ public class HBaseAdmin implements Abortable, Closeable {
     if (checkIfMapRTable(tableName, true)) {
       throw new IllegalArgumentException("snapshot() called for a MapR Table.");
     }
+
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
     SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
     builder.setTable(tableName.getNameAsString());
     builder.setName(snapshotName);
@@ -3247,7 +3266,6 @@ public class HBaseAdmin implements Abortable, Closeable {
     if (checkIfMapRTable(snapshot.getTable(), true)) {
       throw new UnsupportedOperationException("isSnapshotFinished() called for a MapR Table.");
     }
-
     return executeCallable(new MasterCallable<IsSnapshotDoneResponse>(getConnection()) {
       @Override
       public IsSnapshotDoneResponse call() throws ServiceException {

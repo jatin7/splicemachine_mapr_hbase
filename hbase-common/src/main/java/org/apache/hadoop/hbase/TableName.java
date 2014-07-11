@@ -175,11 +175,6 @@ public final class TableName implements Comparable<TableName> {
                                                 int start,
                                                 int end,
                                                 boolean isSnapshot) {
-    //Skip check as qualifier can be different for MapR Tables.
-    if (true) {
-      return;
-    }
-
     if(end - start < 1) {
       throw new IllegalArgumentException(isSnapshot ? "Snapshot" : "Table" + " qualifier must not be empty");
     }
@@ -305,7 +300,7 @@ public final class TableName implements Comparable<TableName> {
     this.hashCode = nameAsString.hashCode();
 
     isLegalNamespaceName(this.namespace);
-    isLegalTableQualifierName(this.qualifier);
+    //isLegalTableQualifierName(this.qualifier);
   }
 
   /**
