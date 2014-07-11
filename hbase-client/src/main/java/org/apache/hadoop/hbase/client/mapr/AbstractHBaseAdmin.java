@@ -39,6 +39,8 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 
+import com.google.protobuf.ServiceException;
+
 /**
  * Provides an interface to manage HBase database table metadata + general
  * administrative functions.  Use HBaseAdmin to create, drop, list, enable and
@@ -248,6 +250,21 @@ public abstract class AbstractHBaseAdmin implements Closeable {
   public abstract boolean isTableAvailable(String tableName) throws IOException;
 
   /**
+   * Use this api to check if the table has been created with the specified number of
+   * splitkeys which was used while creating the given table.
+   * Note : If this api is used after a table's region gets splitted, the api may return
+   * false.
+   * @param tableName
+   *          name of table to check
+   * @param splitKeys
+   *          keys to check if the table has been created with all split keys
+   * @throws IOException
+   *           if a remote or network excpetion occurs
+   */
+  public abstract boolean isTableAvailable(String tableName,
+                                           byte[][] splitKeys) throws IOException;
+ 
+  /**
    * Add a column to an existing table.
    * Asynchronous operation.
    *
@@ -335,6 +352,28 @@ public abstract class AbstractHBaseAdmin implements Closeable {
   public void move(byte[] encodedRegionName, byte[] destServerName)
       throws UnknownRegionException, MasterNotRunningException, ZooKeeperConnectionException {
     LOG.warn("move() called for a MapR Table, silently ignoring.");
+  }
+
+  public void offline(byte[] regionName) throws ZooKeeperConnectionException {
+    LOG.warn("offline() called for a MapR Table, silently ignoring.");
+  }
+
+  public boolean enableCatalogJanitor(boolean enable)
+    throws ServiceException, MasterNotRunningException {
+    LOG.warn("enableCatalogJanitor for MapR, silently ignoring.");
+    return false;
+  }
+
+  public int runCatalogScan()
+    throws ServiceException, MasterNotRunningException {
+    LOG.warn("runCatalogScan for MapR, silently ignoring.");
+    return 0;
+  }
+
+  public boolean isCatalogJanitorEnabled()
+    throws ServiceException, MasterNotRunningException {
+    LOG.warn("isCatalogJanitorEnabled for MapR, silently ignoring.");
+    return false;
   }
 
   public void assign(byte[] regionName) throws IOException {

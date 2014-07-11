@@ -1381,6 +1381,9 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public boolean isTableAvailable(TableName tableName,
                                   byte[][] splitKeys) throws IOException {
+    if (checkIfMapRTable(tableName, true)) {
+      return maprHBaseAdmin_.isTableAvailable(tableName.getQualifierAsString(), splitKeys);
+    }
     return connection.isTableAvailable(tableName, splitKeys);
   }
 
@@ -2088,8 +2091,13 @@ public class HBaseAdmin implements Abortable, Closeable {
    *          Region to offline.
    * @throws IOException
    */
-  public void offline(final byte [] regionName)
-  throws IOException {
+  public void offline(byte [] regionName)
+  throws IOException, ZooKeeperConnectionException {
+    if (checkIfMapRTable(regionName, true)) {
+      maprHBaseAdmin_.offline(regionName);
+      return;
+    }
+
     MasterKeepAliveConnection master = connection.getKeepAliveMasterService();
     try {
       master.offlineRegion(null,RequestConverter.buildOfflineRegionRequest(regionName));
@@ -2160,7 +2168,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws MasterNotRunningException
    */
   public boolean enableCatalogJanitor(boolean enable)
-      throws ServiceException, MasterNotRunningException {
+      throws ServiceException, MasterNotRunningException, ZooKeeperConnectionException {
+    if (checkIfMapRDefault(true)) {
+      return maprHBaseAdmin_.enableCatalogJanitor(enable);
+    }
+
     MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
     try {
       return stub.enableCatalogJanitor(null,
@@ -2176,7 +2188,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws ServiceException
    * @throws MasterNotRunningException
    */
-  public int runCatalogScan() throws ServiceException, MasterNotRunningException {
+  public int runCatalogScan() throws ServiceException, MasterNotRunningException, ZooKeeperConnectionException {
+    if (checkIfMapRDefault(true)) {
+      return maprHBaseAdmin_.runCatalogScan();
+    }
+
     MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
     try {
       return stub.runCatalogScan(null,
@@ -2191,7 +2207,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws ServiceException
    * @throws org.apache.hadoop.hbase.MasterNotRunningException
    */
-  public boolean isCatalogJanitorEnabled() throws ServiceException, MasterNotRunningException {
+  public boolean isCatalogJanitorEnabled() throws ServiceException, MasterNotRunningException, ZooKeeperConnectionException {
+    if (checkIfMapRDefault(true)) {
+      return maprHBaseAdmin_.isCatalogJanitorEnabled();
+    }
+
     MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
     try {
       return stub.isCatalogJanitorEnabled(null,
