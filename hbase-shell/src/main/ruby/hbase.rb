@@ -66,6 +66,7 @@ module HBaseConstants
   #MapR constants
   PERM = "PERM"
   EXPR = "EXPR"
+  BULKLOAD = "BULKLOAD"
 
   # Load constants from hbase java API
   def self.promote_constants(constants)
