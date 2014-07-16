@@ -401,8 +401,8 @@ public class HTable implements HTableInterface {
       try {
         configuration = conf;
         return tableFactory_.getImplementorInstance(
-          configuration.get("htable.impl.mapr", "com.mapr.fs.HTableImpl"),
-          new Object[] {conf, tableName},
+          configuration.get("htable.impl.mapr", "com.mapr.fs.hbase.HTableImpl"),
+          new Object[] {conf, tableName.getQualifier()},
           new Class[] {Configuration.class, byte[].class});
       } catch (Throwable e) {
         GenericHFactory.handleIOException(e);

@@ -128,7 +128,7 @@ public class HFileOutputFormat2
         final GenericHFactory<RecordWriter<ImmutableBytesWritable, V>> recWriterFactory_ =
           new GenericHFactory<RecordWriter<ImmutableBytesWritable, V>>();
         return recWriterFactory_.getImplementorInstance(
-            "com.mapr.fs.BulkLoadRecordWriter",
+            "com.mapr.fs.hbase.BulkLoadRecordWriter",
             new Object[] { conf, tablePath },
             new Class[] { Configuration.class, Path.class });
       } catch (Throwable e) {

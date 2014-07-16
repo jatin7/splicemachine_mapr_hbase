@@ -394,7 +394,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       tableMappingRule_ = TableMappingRulesFactory.create(conf);
       if (tableMappingRule_.getClusterType() != ClusterType.HBASE_ONLY) {
         maprHBaseAdmin_ = adminFactory_.getImplementorInstance(
-          conf.get("hbaseadmin.impl.mapr", "com.mapr.fs.HBaseAdminImpl"),
+          conf.get("hbaseadmin.impl.mapr", "com.mapr.fs.hbase.HBaseAdminImpl"),
           new Object[] {conf, tableMappingRule_},
           new Class[] {Configuration.class, BaseTableMappingRules.class});
       }
