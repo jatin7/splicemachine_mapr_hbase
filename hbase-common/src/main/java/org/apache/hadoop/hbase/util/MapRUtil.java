@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.util;
 
 import java.util.Arrays;
 
+import org.apache.hadoop.hbase.TableName;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -42,6 +44,15 @@ public abstract class MapRUtil {
     return tableName.startsWith(HBASE_URI_PREFIX)
         ? tableName.substring(tableName.lastIndexOf('/')+1)
             : tableName;
+  }
+
+  public static TableName adjustTableName(TableName tableName) {
+    String alias = tableName.getAliasAsString();
+    if (alias.startsWith(HBASE_URI_PREFIX)) {
+      return TableName.valueOfWithAlias(alias.substring(alias.lastIndexOf('/')+1), alias);
+    } else {
+      return tableName;
+    }
   }
 
   public static byte[] adjustTableName(String tableName) {

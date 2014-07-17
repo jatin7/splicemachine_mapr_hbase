@@ -344,7 +344,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   private boolean checkIfMapRTable(TableName tableName, boolean connectToHBaseOtherwise)
       throws ZooKeeperConnectionException, MasterNotRunningException {
-    if (tableMappingRule_.isMapRTable(HRegionInfo.getTableName(tableName.getQualifierAsString()))) {
+    if (tableMappingRule_.isMapRTable(tableName)) {
       return true;
     }
     if (connectToHBaseOtherwise) {
@@ -481,15 +481,15 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @return True if table exists already.
    * @throws IOException
    */
-  public boolean tableExists(final TableName tableName)
+  public boolean tableExists(TableName tableName)
   throws IOException {
     if (checkIfMapRTable(tableName, true)) {
-      return maprHBaseAdmin_.tableExists(tableName.getQualifierAsString());
+      return maprHBaseAdmin_.tableExists(tableName.getAliasAsString());
     }
+    tableName = MapRUtil.adjustTableName(tableName);
     boolean b = false;
     CatalogTracker ct = getCatalogTracker();
     try {
-      //TODO: nagrawal FSUtils.adjustTableNameString is missing
       b = MetaReader.tableExists(ct, tableName);
     } finally {
       cleanupCatalogTracker(ct);
@@ -627,12 +627,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws TableNotFoundException
    * @throws IOException if a remote or network exception occurs
    */
-  public HTableDescriptor getTableDescriptor(final TableName tableName)
+  public HTableDescriptor getTableDescriptor(TableName tableName)
   throws TableNotFoundException, IOException {
     if (checkIfMapRTable(tableName, true)) {
-      return maprHBaseAdmin_.getTableDescriptor(tableName.getQualifierAsString());
+      return maprHBaseAdmin_.getTableDescriptor(tableName.getAliasAsString());
     }
-    //TODO: nagrawal return this.connection.getHTableDescriptor(FSUtils.adjustTableName(tableName));
+    tableName = MapRUtil.adjustTableName(tableName);
     return this.connection.getHTableDescriptor(tableName);
   }
 
@@ -870,14 +870,18 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @param tableName name of table to delete
    * @throws IOException if a remote or network exception occurs
    */
-  public void deleteTable(final TableName tableName) throws IOException {
-    boolean tableExists = true;
+  public void deleteTable(TableName tableName) throws IOException {
     if (checkIfMapRTable(tableName, true)) {
-      maprHBaseAdmin_.deleteTable(tableName.getQualifierAsString());
+      maprHBaseAdmin_.deleteTable(tableName.getAliasAsString());
       return;
     }
-
+    tableName = MapRUtil.adjustTableName(tableName);
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    deleteTableInternal(tableName);
+  }
+
+  private void deleteTableInternal(final TableName tableName) throws IOException {
+    boolean tableExists = true;
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
@@ -1084,13 +1088,18 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException
    * @since 0.90.0
    */
-  public void enableTableAsync(final TableName tableName)
+  public void enableTableAsync(TableName tableName)
   throws IOException {
     if (checkIfMapRTable(tableName, true)) {
-      maprHBaseAdmin_.enableTable(tableName.getQualifierAsString());
+      maprHBaseAdmin_.enableTable(tableName.getAliasAsString());
       return;
     }
+    tableName = MapRUtil.adjustTableName(tableName);
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    enableTableAsyncInternal(tableName);
+  }
+  private void enableTableAsyncInternal(final TableName tableName)
+  throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
@@ -1169,12 +1178,17 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @see #isTableEnabled(byte[])
    * @since 0.90.0
    */
-  public void disableTableAsync(final TableName tableName) throws IOException {
+  public void disableTableAsync(TableName tableName) throws IOException {
     if (checkIfMapRTable(tableName, true)) {
-      maprHBaseAdmin_.disableTable(tableName.getQualifierAsString());
+      maprHBaseAdmin_.disableTable(tableName.getAliasAsString());
       return;
     }
+    tableName = MapRUtil.adjustTableName(tableName);
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    disableTableAsyncInternal(tableName);
+  }
+  private void disableTableAsyncInternal(final TableName tableName)
+  throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
@@ -1208,7 +1222,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void disableTable(TableName tableName)
   throws IOException {
    if (checkIfMapRTable(tableName, true)) {
-      maprHBaseAdmin_.disableTable(tableName.getQualifierAsString());
+      maprHBaseAdmin_.disableTable(tableName.getAliasAsString());
       return;
     }
     disableTableAsync(tableName);
@@ -1312,9 +1326,10 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public boolean isTableEnabled(TableName tableName) throws IOException {
     if (checkIfMapRTable(tableName, true)) {
-      return maprHBaseAdmin_.isTableEnabled(tableName.getQualifierAsString());
+      return maprHBaseAdmin_.isTableEnabled(tableName.getAliasAsString());
     }
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    tableName = MapRUtil.adjustTableName(tableName);
     checkTableExistence(tableName);
     return connection.isTableEnabled(tableName);
   }
@@ -1336,9 +1351,10 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public boolean isTableDisabled(TableName tableName) throws IOException {
     if (checkIfMapRTable(tableName, true)) {
-      return maprHBaseAdmin_.isTableDisabled(tableName.getQualifierAsString());
+      return maprHBaseAdmin_.isTableDisabled(tableName.getAliasAsString());
     }
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    tableName = MapRUtil.adjustTableName(tableName);
     checkTableExistence(tableName);
     return connection.isTableDisabled(tableName);
   }
@@ -1358,9 +1374,10 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public boolean isTableAvailable(TableName tableName) throws IOException {
     if (checkIfMapRTable(tableName, true)) {
-      return maprHBaseAdmin_.isTableAvailable(tableName.getQualifierAsString());
+      return maprHBaseAdmin_.isTableAvailable(tableName.getAliasAsString());
     }
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    tableName = MapRUtil.adjustTableName(tableName);
     return connection.isTableAvailable(tableName);
   }
 
@@ -1387,9 +1404,10 @@ public class HBaseAdmin implements Abortable, Closeable {
   public boolean isTableAvailable(TableName tableName,
                                   byte[][] splitKeys) throws IOException {
     if (checkIfMapRTable(tableName, true)) {
-      return maprHBaseAdmin_.isTableAvailable(tableName.getQualifierAsString(), splitKeys);
+      return maprHBaseAdmin_.isTableAvailable(tableName.getAliasAsString(), splitKeys);
     }
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    tableName = MapRUtil.adjustTableName(tableName);
     return connection.isTableAvailable(tableName, splitKeys);
   }
 
@@ -1416,14 +1434,19 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException
    *           if a remote or network exception occurs
    */
-  public Pair<Integer, Integer> getAlterStatus(final TableName tableName)
+  public Pair<Integer, Integer> getAlterStatus(TableName tableName)
   throws IOException {
     if (checkIfMapRTable(tableName, true)) {
       // FIXME Revisit if we need to return tablet count
       return new Pair<Integer, Integer>(0, 0);
     }
 
+    tableName = MapRUtil.adjustTableName(tableName);
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    return getAlterStatusInternal(tableName);
+  }
+  private Pair<Integer, Integer> getAlterStatusInternal(final TableName tableName)
+  throws IOException {
     return executeCallable(new MasterCallable<Pair<Integer, Integer>>(getConnection()) {
       @Override
       public Pair<Integer, Integer> call() throws ServiceException {
@@ -1489,15 +1512,20 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @param column column descriptor of column to be added
    * @throws IOException if a remote or network exception occurs
    */
-  public void addColumn(final TableName tableName, final HColumnDescriptor column)
+  public void addColumn(TableName tableName, final HColumnDescriptor column)
   throws IOException {
     column.validate();
     if (checkIfMapRTable(tableName, true)) {
-      maprHBaseAdmin_.addColumn(tableName.getQualifierAsString(), column);
+      maprHBaseAdmin_.addColumn(tableName.getAliasAsString(), column);
       return;
     }
 
+    tableName = MapRUtil.adjustTableName(tableName);
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    addColumnInternal(tableName, column);
+  }
+  private void addColumnInternal(final TableName tableName, final HColumnDescriptor column)
+  throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
@@ -1542,15 +1570,20 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @param columnName name of column to be deleted
    * @throws IOException if a remote or network exception occurs
    */
-  public void deleteColumn(final TableName tableName, final byte [] columnName)
+  public void deleteColumn(TableName tableName, final byte [] columnName)
   throws IOException {
     if (checkIfMapRTable(tableName, true)) {
       maprHBaseAdmin_.deleteColumn(
-        tableName.getQualifierAsString(), Bytes.toString(columnName));
+        tableName.getAliasAsString(), Bytes.toString(columnName));
       return;
     }
 
+    tableName = MapRUtil.adjustTableName(tableName);
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    deleteColumnInternal(tableName, columnName);
+  }
+  private void deleteColumnInternal(final TableName tableName, final byte [] columnName)
+  throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
@@ -1597,15 +1630,21 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @param descriptor new column descriptor to use
    * @throws IOException if a remote or network exception occurs
    */
-  public void modifyColumn(final TableName tableName, final HColumnDescriptor descriptor)
+  public void modifyColumn(TableName tableName, final HColumnDescriptor descriptor)
   throws IOException {
     descriptor.validate();
     if (checkIfMapRTable(tableName, true)) {
-      maprHBaseAdmin_.modifyColumn(tableName.getQualifierAsString(), descriptor);
+      maprHBaseAdmin_.modifyColumn(tableName.getAliasAsString(), descriptor);
       return;
     }
 
+    tableName = MapRUtil.adjustTableName(tableName);
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    modifyColumnInternal(tableName, descriptor);
+  }
+  private void modifyColumnInternal(final TableName tableName,
+                                    final HColumnDescriptor descriptor)
+  throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
@@ -2400,18 +2439,24 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @param htd modified description of the table
    * @throws IOException if a remote or network exception occurs
    */
-  public void modifyTable(final TableName tableName, final HTableDescriptor htd)
+  public void modifyTable(TableName tableName, final HTableDescriptor htd)
   throws IOException {
     if (checkIfMapRTable(tableName, true)) {
-      maprHBaseAdmin_.modifyTable(tableName.getQualifierAsString(), htd);
+      maprHBaseAdmin_.modifyTable(tableName.getAliasAsString(), htd);
       return;
     }
+    tableName = MapRUtil.adjustTableName(tableName);
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    modifyTableInternal(tableName, htd);
+  }
+
+  private void modifyTableInternal(final TableName tableName, final HTableDescriptor htd)
+  throws IOException {
     if (!tableName.equals(htd.getTableName())) {
       throw new IllegalArgumentException("the specified table name '" + tableName +
         "' doesn't match with the HTD one: " + htd.getTableName());
     }
 
-    TableName.isLegalFullyQualifiedTableName(tableName.getName());
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
@@ -2817,12 +2862,13 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @return Ordered list of {@link HRegionInfo}.
    * @throws IOException
    */
-  public List<HRegionInfo> getTableRegions(final TableName tableName)
+  public List<HRegionInfo> getTableRegions(TableName tableName)
   throws IOException {
     if (checkIfMapRTable(tableName, true)) {
       return maprHBaseAdmin_.getTableRegions(tableName.getQualifier());
     }
 
+    tableName = MapRUtil.adjustTableName(tableName);
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
     CatalogTracker ct = getCatalogTracker();
     List<HRegionInfo> Regions = null;
@@ -3122,13 +3168,14 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
    */
   public void snapshot(final String snapshotName,
-                       final TableName tableName,
+                       TableName tableName,
                       SnapshotDescription.Type type) throws IOException, SnapshotCreationException,
       IllegalArgumentException {
     if (checkIfMapRTable(tableName, true)) {
       throw new IllegalArgumentException("snapshot() called for a MapR Table.");
     }
 
+    tableName = MapRUtil.adjustTableName(tableName);
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
     SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
     builder.setTable(tableName.getNameAsString());

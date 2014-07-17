@@ -91,7 +91,7 @@ public class BaseTableMappingRules {
    * @throws IllegalArgumentException If the passed {@code tableName} is null
    */
   public boolean isMapRTable(TableName tableName) {
-    return isMapRTable(tableName.getQualifierAsString());
+    return isMapRTable(tableName.getAliasAsString());
   }
 
   /**

@@ -73,6 +73,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.MapRUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 
@@ -201,7 +202,7 @@ public class HTable implements HTableInterface {
       return; // If it was a MapR table, our work is done
     }
 
-    this.tableName = tableName;
+    this.tableName = MapRUtil.adjustTableName(tableName);
     this.cleanupPoolOnClose = this.cleanupConnectionOnClose = true;
     if (conf == null) {
       this.connection = null;
@@ -228,7 +229,7 @@ public class HTable implements HTableInterface {
       return;
     }
 
-    this.tableName = tableName;
+    this.tableName = MapRUtil.adjustTableName(tableName);
     this.cleanupPoolOnClose = true;
     this.cleanupConnectionOnClose = false;
     this.connection = connection;
@@ -293,7 +294,7 @@ public class HTable implements HTableInterface {
     this.connection = HConnectionManager.getConnection(conf);
     this.configuration = conf;
     this.pool = pool;
-    this.tableName = tableName;
+    this.tableName = MapRUtil.adjustTableName(tableName);
     this.cleanupPoolOnClose = false;
     this.cleanupConnectionOnClose = true;
 
@@ -337,7 +338,7 @@ public class HTable implements HTableInterface {
     if (connection == null || connection.isClosed()) {
       throw new IllegalArgumentException("Connection is null or closed.");
     }
-    this.tableName = tableName;
+    this.tableName = MapRUtil.adjustTableName(tableName);
     this.cleanupPoolOnClose = this.cleanupConnectionOnClose = false;
     this.connection = connection;
     this.configuration = connection.getConfiguration();
