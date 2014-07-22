@@ -1045,6 +1045,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    *    table is not enabled after the retries period.
    */
   private void waitUntilTableIsEnabled(final TableName tableName) throws IOException {
+    if (checkIfMapRTable(tableName, true)) {
+      // MapR table are enabled synchronously.
+      return;
+    }
+
     boolean enabled = false;
     long start = EnvironmentEdgeManager.currentTimeMillis();
     for (int tries = 0; tries < (this.numRetries * this.retryLongerMultiplier); tries++) {
