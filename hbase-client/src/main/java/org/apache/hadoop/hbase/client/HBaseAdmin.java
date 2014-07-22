@@ -2901,7 +2901,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public HTableDescriptor[] getTableDescriptorsByTableName(List<TableName> tableNames)
   throws IOException {
-    return this.connection.getHTableDescriptorsByTableName(tableNames);
+    List<HTableDescriptor> list = new ArrayList<HTableDescriptor>();
+    for (TableName tableName : tableNames) {
+      list.add(getTableDescriptor(tableName));
+    }
+    return list.toArray(new HTableDescriptor[list.size()]);
   }
 
   /**
