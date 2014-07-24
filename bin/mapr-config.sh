@@ -24,7 +24,6 @@ BASE_MAPR=${MAPR_HOME:-/opt/mapr}
 env=${BASE_MAPR}/conf/env.sh
 [ -f $env ] && . $env
 
-
 # Set the user if not set in the environment
 if [ "$HBASE_IDENT_STRING" == "" ]; then
   HBASE_IDENT_STRING=`id -nu`
@@ -46,7 +45,7 @@ for jar in ${MAPR_JARS}; do
     HBASE_MAPR_OVERRIDE_JARS=${HBASE_MAPR_OVERRIDE_JARS}:${JARS}
   fi
 done
-# Now remove any additional ':' and export the variable
+# Remove any additional ':' from the tail
 HBASE_MAPR_OVERRIDE_JARS="${HBASE_MAPR_OVERRIDE_JARS#:}"
 
 # Second set
@@ -58,5 +57,7 @@ for jar in ${MAPR_JARS}; do
     HBASE_MAPR_EXTRA_JARS=${HBASE_MAPR_EXTRA_JARS}:${JARS}
   fi
 done
+# Remove any additional ':' from the tail
+HBASE_MAPR_EXTRA_JARS="${HBASE_MAPR_EXTRA_JARS#:}"
 
 export HBASE_OPTS HBASE_MAPR_OVERRIDE_JARS HBASE_MAPR_EXTRA_JARS HBASE_IDENT_STRING
