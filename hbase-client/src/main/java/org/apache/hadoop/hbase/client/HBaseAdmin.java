@@ -636,6 +636,9 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public TableName[] listTableNames() throws IOException {
+    if (checkIfMapRDefault(false) || !ensureConnectedToHBase(false)) {
+      return maprHBaseAdmin_.listTableNames();
+    }
     return this.connection.listTableNames();
   }
 
@@ -1803,6 +1806,10 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public List<HRegionInfo> getOnlineRegions(
       final ServerName sn) throws IOException {
+    if (checkIfMapRDefault(true)) {
+      throw new UnsupportedOperationException(
+        "getOnlineRegions is not supported for MapR.");
+    }
     AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     return ProtobufUtil.getOnlineRegions(admin);
   }
