@@ -617,6 +617,9 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public TableName[] listTableNames() throws IOException {
+    if (checkIfMapRDefault(false) || !ensureConnectedToHBase(false)) {
+      return maprHBaseAdmin_.listTableNames();
+    }
     return this.connection.listTableNames();
   }
 

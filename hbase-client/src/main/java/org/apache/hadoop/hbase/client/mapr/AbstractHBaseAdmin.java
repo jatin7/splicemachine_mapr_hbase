@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -72,6 +73,8 @@ public abstract class AbstractHBaseAdmin implements Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public abstract HTableDescriptor[] listTables() throws IOException;
+
+  public abstract TableName[] listTableNames() throws IOException;
 
   /**
    * List all the userspace tables matching the given regular expression.
