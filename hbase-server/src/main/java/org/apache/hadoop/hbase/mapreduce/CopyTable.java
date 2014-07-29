@@ -72,6 +72,7 @@ public class CopyTable extends Configured implements Tool {
     if (!doCommandLine(args)) {
       return null;
     }
+    conf.set("SrcTableName", tableName);
     Job job = new Job(conf, NAME + "_" + tableName);
     job.setJarByClass(CopyTable.class);
     Scan scan = new Scan();
