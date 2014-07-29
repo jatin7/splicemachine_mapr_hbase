@@ -125,6 +125,7 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     for (Map.Entry<String, byte[]> entry : putToCopy.getAttributesMap().entrySet()) {
       this.setAttribute(entry.getKey(), entry.getValue());
     }
+    this.tableUuid = putToCopy.tableUuid;
   }
 
   /**
