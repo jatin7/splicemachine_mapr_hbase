@@ -1787,6 +1787,10 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public List<HRegionInfo> getOnlineRegions(
       final ServerName sn) throws IOException {
+    if (checkIfMapRDefault(true)) {
+      throw new UnsupportedOperationException(
+        "getOnlineRegions is not supported for MapR.");
+    }
     AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     return ProtobufUtil.getOnlineRegions(admin);
   }
