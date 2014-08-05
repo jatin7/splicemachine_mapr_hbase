@@ -575,6 +575,9 @@ public class HTable implements HTableInterface {
 
   @Override
   public TableName getName() {
+    if (maprTable_ != null) {
+      return TableName.valueOf(maprTable_.getTableName());
+    }
     return tableName;
   }
 
@@ -1827,7 +1830,7 @@ public class HTable implements HTableInterface {
 
   @Override
   public String toString() {
-    return tableName + ";" + connection;
+    return getName() + ";" + connection;
   }
 
   /**
