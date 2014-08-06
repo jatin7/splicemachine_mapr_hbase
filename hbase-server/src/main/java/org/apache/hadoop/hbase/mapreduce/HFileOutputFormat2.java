@@ -304,6 +304,9 @@ public class HFileOutputFormat2
 
     Path tablePath = tableMappingRule.getMaprTablePath(tableName.getBytes());
     conf.set(MAPR_TABLE_PATH_CONF_KEY, tablePath.toString());
+    conf.setStrings("io.serializations", conf.get("io.serializations"),
+        MutationSerialization.class.getName(), ResultSerialization.class.getName(),
+        KeyValueSerialization.class.getName());
 
     TableMapReduceUtil.addDependencyJars(conf, tableMappingRule.getClass());
     TableMapReduceUtil.addDependencyJars(job);
