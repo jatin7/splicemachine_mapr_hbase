@@ -51,6 +51,8 @@ public abstract class Mutation extends OperationWithAttributes implements Row {
   protected long ts = HConstants.LATEST_TIMESTAMP;
   protected long lockId = -1L;
   protected boolean writeToWAL = true;
+  protected byte [] tableUuid = null;
+
   protected Map<byte [], List<KeyValue>> familyMap =
       new TreeMap<byte [], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
 
@@ -278,6 +280,14 @@ public abstract class Mutation extends OperationWithAttributes implements Row {
       }
     }
     return clusterIds;
+  }
+
+  public void setTableUuid(byte[] tableUuid) {
+    this.tableUuid = tableUuid;
+  }
+
+  public byte[] getTableUuid() {
+    return tableUuid;
   }
 
   /**

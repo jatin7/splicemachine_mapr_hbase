@@ -33,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Delete;
@@ -116,6 +117,7 @@ public class Import {
   extends TableMapper<ImmutableBytesWritable, Mutation> {
     private Map<byte[], byte[]> cfRenameMap;
     private UUID clusterId;
+    private byte[] tableUuid;
       
     /**
      * @param row  The current table row key.
@@ -162,10 +164,12 @@ public class Import {
         }
         if (put != null) {
           put.setClusterId(clusterId);
+          put.setTableUuid(tableUuid);
           context.write(key, put);
         }
         if (delete != null) {
           delete.setClusterId(clusterId);
+          delete.setTableUuid(tableUuid);
           context.write(key, delete);
         }
       }
@@ -174,8 +178,17 @@ public class Import {
     @Override
     public void setup(Context context) {
       Configuration conf = context.getConfiguration();
+      String srcTableName = conf.get("SrcTableName");
       cfRenameMap = createCfRenameMap(conf);
       filter = instantiateFilter(conf);
+
+      try {
+        HTable table = new HTable(conf, srcTableName);
+        HTableDescriptor htd = table.getTableDescriptor();
+        tableUuid = htd.getValue(Bytes.toBytes("UUID"));
+      } catch (IOException e) {
+        LOG.error("Problem setting up task", e);
+      }
 
       try {
         HConnection connection = HConnectionManager.getConnection(conf);
