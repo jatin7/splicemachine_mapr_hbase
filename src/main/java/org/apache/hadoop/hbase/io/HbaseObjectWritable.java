@@ -747,7 +747,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     int b = (byte)WritableUtils.readVInt(in);
     if (b != NOT_ENCODED) {
       instanceClass = CODE_TO_CLASS.get(b);
-      if (instanceClass == Writable.class) {
+      if (Writable.class.isAssignableFrom(instanceClass)) {
         // In case Writable, the actual type code follows
         b = (byte)WritableUtils.readVInt(in);
         if (b != NOT_ENCODED) {
