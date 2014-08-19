@@ -134,6 +134,7 @@ public class Delete extends Mutation
     this.lockId = d.getLockId();
     this.familyMap.putAll(d.getFamilyMap());
     this.writeToWAL = d.writeToWAL;
+    this.tableUuid = d.tableUuid;
   }
 
   /**

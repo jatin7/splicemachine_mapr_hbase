@@ -115,6 +115,7 @@ public class Put extends Mutation
       this.familyMap.put(entry.getKey(), entry.getValue());
     }
     this.writeToWAL = putToCopy.writeToWAL;
+    this.tableUuid = putToCopy.tableUuid;
   }
 
   /**
