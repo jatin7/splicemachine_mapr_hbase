@@ -182,12 +182,14 @@ public class Import {
       cfRenameMap = createCfRenameMap(conf);
       filter = instantiateFilter(conf);
 
-      try {
-        HTable table = new HTable(conf, srcTableName);
-        HTableDescriptor htd = table.getTableDescriptor();
-        tableUuid = htd.getValue(Bytes.toBytes("UUID"));
-      } catch (IOException e) {
-        LOG.error("Problem setting up task", e);
+      if (srcTableName != null) {
+        try {
+          HTable table = new HTable(conf, srcTableName);
+          HTableDescriptor htd = table.getTableDescriptor();
+          tableUuid = htd.getValue(Bytes.toBytes("UUID"));
+        } catch (IOException e) {
+          LOG.error("Problem setting up task", e);
+        }
       }
 
       try {
