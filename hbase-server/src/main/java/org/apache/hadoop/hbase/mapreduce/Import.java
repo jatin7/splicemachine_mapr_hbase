@@ -214,12 +214,14 @@ public class Import {
         durability = Durability.valueOf(durabilityStr.toUpperCase());
       }
 
-      try {
-        HTable table = new HTable(conf, srcTableName);
-        HTableDescriptor htd = table.getTableDescriptor();
-        tableUuid = htd.getValue(Bytes.toBytes("UUID"));
-      } catch (IOException e) {
-        LOG.error("Problem setting up task", e);
+      if (srcTableName != null) {
+        try {
+          HTable table = new HTable(conf, srcTableName);
+          HTableDescriptor htd = table.getTableDescriptor();
+          tableUuid = htd.getValue(Bytes.toBytes("UUID"));
+        } catch (IOException e) {
+          LOG.error("Problem setting up task", e);
+        }
       }
 
       // TODO: This is kind of ugly doing setup of ZKW just to read the clusterid.
