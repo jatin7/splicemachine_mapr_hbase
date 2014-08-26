@@ -467,7 +467,7 @@ module Hbase
             return
           end
 
-          descriptor = hcd(arg, htd, table_name)
+          descriptor = hcd(arg, htd)
 
           if arg[COMPRESSION_COMPACT]
             descriptor.setValue(COMPRESSION_COMPACT, arg[COMPRESSION_COMPACT])
@@ -714,7 +714,6 @@ module Hbase
             puts "SNAPPY is treated as LZ4"
             compression = 'LZ4'
           end
-
           incl = com.mapr.fs.SchemaHelper::Compression.constants.include?(compression)
         else
           incl = org.apache.hadoop.hbase.io.hfile.Compression::Algorithm.constants.include?(compression)
@@ -727,7 +726,7 @@ module Hbase
           end
         else
           # Match the compression to hbase version (same is done in java code)
-          # Better way to do this?? 
+          # Better way to do this??
           if (compression == 'LZF')
             puts "LZF is treated as LZ4"
             compression = 'LZ4'
@@ -735,6 +734,14 @@ module Hbase
           if (compression == 'ZLIB')
             puts "ZLIB is treated as GZ"
             compression = 'GZ'
+          end
+          if (compression == 'LZO')
+            puts "LZO is treated as LZ4"
+            compression = 'LZ4'
+          end
+          if (compression == 'OFF')
+            puts "OFF is treated as NONE"
+            compression = 'NONE'
           end
           family.setCompressionType(org.apache.hadoop.hbase.io.hfile.Compression::Algorithm.valueOf(compression))
         end
