@@ -34,7 +34,7 @@ module Hbase
       @formatter = formatter
       @shell = shell
       begin
-        @mapping_rules = com.mapr.fs.MapRTableMappingRules.new(configuration)
+        @mapping_rules = com.mapr.fs.hbase.MapRTableMappingRules.new(configuration)
       rescue NameError => e
         @mapping_rules = nil
         return
@@ -43,11 +43,11 @@ module Hbase
       @security_available = false
       begin
         @perm_maps = {
-          TYPE_TABLE => com.mapr.fs.AceHelper::TABLE_PERMISSIONS,
-          TYPE_FAMILY => com.mapr.fs.AceHelper::FAMILY_PERMISSIONS,
-          TYPE_QUALIFIER => com.mapr.fs.AceHelper::COLUMN_PERMISSIONS
+          TYPE_TABLE => com.mapr.fs.hbase.AceHelper::TABLE_PERMISSIONS,
+          TYPE_FAMILY => com.mapr.fs.hbase.AceHelper::FAMILY_PERMISSIONS,
+          TYPE_QUALIFIER => com.mapr.fs.hbase.AceHelper::COLUMN_PERMISSIONS
         }
-        @admin = com.mapr.fs.HBaseAdminImpl.new(configuration, @mapping_rules)
+        @admin = com.mapr.fs.hbase.HBaseAdminImpl.new(configuration, @mapping_rules)
         @security_available = true
       rescue => e
       end
@@ -86,7 +86,7 @@ module Hbase
           raise(ArgumentError, "Can't find family: #{family}") unless htd.hasFamily(family.to_java_bytes)
           cf_perms = cfs_permissions[family]
           if cf_perms.nil?
-            cf_perms = com.mapr.fs.CFPermissions.new(family)
+            cf_perms = com.mapr.fs.hbase.CFPermissions.new(family)
             cfs_permissions[family] = cf_perms
           end
 
@@ -171,7 +171,7 @@ module Hbase
     def validate_permissions(type, permission, expression=nil)
       raise(ArgumentError, "The permission '#{permission}' is not valid for #{type}.") if !@perm_maps[type].contains(permission)
       begin
-        com.mapr.fs.AceHelper::toPostfix(expression) unless expression.nil?
+        com.mapr.fs.hbase.AceHelper::toPostfix(expression) unless expression.nil?
       rescue => e
         puts e.message
         puts "Backtrace: #{e.backtrace.join("\n           ")}" if @shell.debug
