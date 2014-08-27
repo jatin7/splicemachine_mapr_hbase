@@ -180,7 +180,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   private BaseTableMappingRules tableMappingRule_;
 
   abstract class HBaseConnector {
-    abstract void connect() throws ZooKeeperConnectionException, MasterNotRunningException;
+    abstract void connect() throws ZooKeeperConnectionException, MasterNotRunningException, IOException;
   }
   private final HBaseConnector hbaseConnector_;
 
@@ -221,8 +221,27 @@ public class HBaseAdmin implements Abortable, Closeable {
   throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
     // Will not leak connections, as the new implementation of the constructor
     // does not throw exceptions anymore.
-    this(HConnectionManager.getConnection(new Configuration(c)));
+    hbaseConnector_ = new HBaseConnector() {
+      @Override
+      void connect() throws ZooKeeperConnectionException, MasterNotRunningException, IOException {
+        connectWithConfiguration(c);
+      }
+    };
+    commonInit(c);
+  }
+  void connectWithConfiguration(Configuration c)
+      throws ZooKeeperConnectionException, MasterNotRunningException, IOException {
+    this.conf = new Configuration(c);
+    this.connection = HConnectionManager.getConnection(this.conf);
     this.cleanupConnectionOnClose = true;
+
+    this.pause = this.conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
+        HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+    this.numRetries = this.conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+        HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+    this.retryLongerMultiplier = this.conf.getInt(
+        "hbase.client.retries.longer.multiplier", 10);
+    this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(this.conf);
   }
 
  /**
@@ -248,7 +267,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     // required since in a pure M7 world there won't be any HBase
     hbaseConnector_ = new HBaseConnector() {
       @Override
-      void connect() throws ZooKeeperConnectionException, MasterNotRunningException {
+      void connect() throws ZooKeeperConnectionException, MasterNotRunningException, IOException {
         connectWithHConnection(connection);
       }
     };
