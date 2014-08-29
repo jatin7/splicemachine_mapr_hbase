@@ -73,6 +73,11 @@ public class RegionSizeCalculator {
         return;
       }
 
+      if (table.isMapRTable()) {
+        LOG.info("Region size calculation disabled for MapR tables.");
+        return;
+      }
+
       LOG.info("Calculating region sizes for table \"" + new String(table.getTableName()) + "\".");
 
       //get regions for table
