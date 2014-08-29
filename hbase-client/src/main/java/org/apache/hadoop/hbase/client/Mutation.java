@@ -328,6 +328,11 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * @param clusterIds of the clusters that have consumed the mutation
    */
   public void setClusterIds(List<UUID> clusterIds) {
+    //Check if any clusterId is null return
+    for (UUID clusterId : clusterIds) {
+      if (clusterId == null) return;
+    }
+
     ByteArrayDataOutput out = ByteStreams.newDataOutput();
     out.writeInt(clusterIds.size());
     for (UUID clusterId : clusterIds) {
