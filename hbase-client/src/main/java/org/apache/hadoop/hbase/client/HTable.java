@@ -2004,4 +2004,11 @@ public class HTable implements HTableInterface {
         callbackErrorServers);
     }
   }
+
+  public boolean isMapRTable() {
+    if (maprTable_ != null) {
+      return true;
+    }
+    return false;
+  }
 }
