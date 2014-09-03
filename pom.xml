@@ -39,7 +39,7 @@
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>pom</packaging>
-  <version>0.98.4-mapr-1408-SNAPSHOT</version>
+  <version>0.98.4-mapr-1408</version>
   <name>HBase</name>
   <description>
     Apache HBase is the Hadoop database. Use it when you need
@@ -887,12 +887,12 @@
     <apache.git.tag>0f1bf2e6681547206ff0cd933645d22a29602577</apache.git.tag><!-- Apache Github tag for 0.98.4 is wrong -->
     <!-- Latest version of Hadoop distributed with MapR -->
     <mapr.hadoop.version>1.0.3-mapr-3.1.1</mapr.hadoop.version>
-    <mapr.hadoop-two.version>4.0.1-mapr-SNAPSHOT</mapr.hadoop-two.version>
+    <mapr.hadoop-two.version>4.0.1-mapr</mapr.hadoop-two.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <!-- Dependencies -->
-    <hadoop-two.version>2.4.1-mapr-1408-SNAPSHOT</hadoop-two.version>
+    <hadoop-two.version>2.4.1-mapr-1408</hadoop-two.version>
     <hadoop-one.version>1.2.1</hadoop-one.version>
     <commons-cli.version>1.2</commons-cli.version>
     <commons-codec.version>1.7</commons-codec.version>
