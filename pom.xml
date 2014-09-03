@@ -2623,4 +2623,4 @@ MAVEN_OPTS=-Xmx2048m mvn clean test -Pclover site -->
       <uniqueVersion>true</uniqueVersion>
     </snapshotRepository>
   </distributionManagement>
-
+</project>
