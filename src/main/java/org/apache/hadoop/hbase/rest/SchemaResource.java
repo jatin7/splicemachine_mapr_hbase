@@ -34,12 +34,10 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.core.Response.ResponseBuilder;
-
 import javax.xml.namespace.QName;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -233,6 +231,7 @@ public class SchemaResource extends ResourceBase {
   }
 
   @DELETE
+  @SuppressWarnings("deprecation")
   public Response delete(final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("DELETE " + uriInfo.getAbsolutePath());
@@ -244,6 +243,8 @@ public class SchemaResource extends ResourceBase {
     }
 
     try {
+      // remove the table instances from cached table pool, if exists
+      servlet.getTablePool().closeTablePool(tableResource.getName());
       HBaseAdmin admin = servlet.getAdmin();
       boolean success = false;
       for (int i = 0; i < 10; i++) try {
