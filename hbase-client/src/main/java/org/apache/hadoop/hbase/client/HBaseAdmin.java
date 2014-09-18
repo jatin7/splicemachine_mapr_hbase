@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionImplementation;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.mapr.AbstractHBaseAdmin;
@@ -272,6 +273,9 @@ public class HBaseAdmin implements Abortable, Closeable {
       }
     };
     commonInit(connection.getConfiguration());
+    if (maprHBaseAdmin_ != null && connection instanceof HConnectionImplementation) {
+      maprHBaseAdmin_.setUser(((HConnectionImplementation)connection).getUser());
+    }
   }
   private void connectWithHConnection(HConnection connection)
       throws MasterNotRunningException, ZooKeeperConnectionException  {

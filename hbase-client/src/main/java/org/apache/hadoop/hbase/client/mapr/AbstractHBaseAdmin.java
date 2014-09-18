@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.security.User;
 
 import com.google.protobuf.ServiceException;
 
@@ -53,6 +54,13 @@ import com.google.protobuf.ServiceException;
  */
 public abstract class AbstractHBaseAdmin implements Closeable {
   private final static Log LOG = LogFactory.getLog(HBaseAdmin.class);
+
+  /**
+   * Sets the User for the Admin instance.
+   */
+  public void setUser(User user) {
+    LOG.debug("setUser() called with MapR Table without impersonation support.");
+  }
 
   /**
    * @param tableName Table to check.

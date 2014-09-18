@@ -710,6 +710,10 @@ public class HConnectionManager {
           HConstants.DEFAULT_HBASE_CLIENT_PREFETCH_LIMIT);
     }
 
+    public User getUser() {
+      return user;
+    }
+
     @Override
     public HTableInterface getTable(String tableName) throws IOException {
       return getTable(TableName.valueOf(tableName));

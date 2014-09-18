@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -54,6 +55,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionImplementation;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.client.mapr.AbstractHTable;
@@ -225,6 +227,8 @@ public class HTable implements HTableInterface {
    * @throws IOException if a remote or network exception occurs
    */
   public HTable(TableName tableName, HConnection connection) throws IOException {
+    // this must be set before initIfMapRTable() table is called to enable impersonation
+    this.connection = connection;
     if ((maprTable_ = initIfMapRTable(connection.getConfiguration(), tableName)) != null) {
       // If it was a MapR table, our work is done
       return;
@@ -233,7 +237,6 @@ public class HTable implements HTableInterface {
     this.tableName = MapRUtil.adjustTableName(tableName);
     this.cleanupPoolOnClose = true;
     this.cleanupConnectionOnClose = false;
-    this.connection = connection;
     this.configuration = connection.getConfiguration();
 
     this.pool = getDefaultExecutor(this.configuration);
@@ -331,6 +334,8 @@ public class HTable implements HTableInterface {
    */
   public HTable(TableName tableName, final HConnection connection,
       final ExecutorService pool) throws IOException {
+    // this must be set before initIfMapRTable() table is called to enable impersonation
+    this.connection = connection;
     if ((maprTable_ = initIfMapRTable(connection.getConfiguration(), tableName)) != null) {
       // If it was a MapR table, our work is done
       return;
@@ -341,7 +346,6 @@ public class HTable implements HTableInterface {
     }
     this.tableName = MapRUtil.adjustTableName(tableName);
     this.cleanupPoolOnClose = this.cleanupConnectionOnClose = false;
-    this.connection = connection;
     this.configuration = connection.getConfiguration();
     this.pool = pool;
 
@@ -402,16 +406,23 @@ public class HTable implements HTableInterface {
    * @return true if this is a MapR table
    * @throws IOException
    */
-  private AbstractHTable initIfMapRTable(Configuration conf,
-      TableName tableName) throws IOException {
+  private AbstractHTable initIfMapRTable(final Configuration conf,
+      final TableName tableName) throws IOException {
     tableMappingRule_ = TableMappingRulesFactory.create(conf);
     if (tableMappingRule_.isMapRTable(tableName)) {
       try {
         configuration = conf;
-        return tableFactory_.getImplementorInstance(
-          configuration.get("htable.impl.mapr", "com.mapr.fs.hbase.HTableImpl"),
-          new Object[] {conf, tableName.getQualifier()},
-          new Class[] {Configuration.class, byte[].class});
+        if (this.connection instanceof HConnectionImplementation) {
+          return ((HConnectionImplementation)this.connection).getUser().getUGI().doAs(
+              new PrivilegedAction<AbstractHTable>() {
+                @Override
+                public AbstractHTable run() {
+                  return createMapRTable(conf, tableName);
+                }
+              });
+        } else {
+          return createMapRTable(conf, tableName);
+        }
       } catch (Throwable e) {
         GenericHFactory.handleIOException(e);
       }
@@ -419,6 +430,13 @@ public class HTable implements HTableInterface {
     return null;
   }
 
+  private AbstractHTable createMapRTable(Configuration conf,
+      TableName tableName) {
+    return tableFactory_.getImplementorInstance(
+        configuration.get("htable.impl.mapr", "com.mapr.fs.hbase.HTableImpl"),
+        new Object[] {conf, tableName.getQualifier()},
+        new Class[] {Configuration.class, byte[].class});
+  }
 
   /**
    * {@inheritDoc}
