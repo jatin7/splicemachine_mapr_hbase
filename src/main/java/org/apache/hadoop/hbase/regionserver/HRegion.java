@@ -2975,9 +2975,10 @@ public class HRegion implements HeapSize { // , Writable{
       for (Map.Entry<byte[], List<KeyValue>> e : familyMap.entrySet()) {
         byte[] family = e.getKey();
         List<KeyValue> edits = e.getValue();
-
         Store store = getStore(family);
-        for (KeyValue kv: edits) {
+        int listSize = edits.size();
+        for (int i=0; i < listSize; i++) {
+          KeyValue kv = edits.get(i);
           kv.setMemstoreTS(localizedWriteEntry.getWriteNumber());
           size += store.add(kv);
         }
