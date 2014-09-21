@@ -129,4 +129,5 @@ public class RESTServlet implements Constants {
   boolean supportsProxyuser() {
     return conf.getBoolean(HBASE_REST_SUPPORT_PROXYUSER, false);
   }
+
 }
