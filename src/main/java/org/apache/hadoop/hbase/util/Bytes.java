@@ -44,6 +44,7 @@ import org.apache.hadoop.io.WritableUtils;
 import sun.misc.Unsafe;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.util.Bytes.LexicographicalComparerHolder.UnsafeComparer;
 
 /**
  * Utility class that handles byte arrays, conversions to/from other types,
