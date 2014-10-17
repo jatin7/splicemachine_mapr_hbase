@@ -23,7 +23,7 @@
     <parent>
         <artifactId>hbase</artifactId>
         <groupId>org.apache.hbase</groupId>
-        <version>0.98.4-mapr4.0.1-splice1.0.0RC1-SNAPSHOT</version>
+        <version>0.98.4-mapr4.0.1-splice1.0.0RC1</version>
         <relativePath>..</relativePath>
     </parent>
     <artifactId>hbase-testing-util</artifactId>
