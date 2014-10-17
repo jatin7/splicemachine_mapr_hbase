@@ -62,6 +62,10 @@
     <module>hbase-assembly</module>
     <module>hbase-testing-util</module>
   </modules>
+  <scm>
+    <connection>scm:git:git@github.com:splicemachine/spliceengine.git</connection>
+    <developerConnection>scm:git:git@github.com:splicemachine/spliceengine.git</developerConnection>
+  </scm>
   <issueManagement>
     <system>JIRA</system>
     <url>http://issues.apache.org/jira/browse/HBASE</url>
