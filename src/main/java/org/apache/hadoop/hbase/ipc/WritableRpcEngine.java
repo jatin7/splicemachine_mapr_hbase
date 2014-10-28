@@ -432,7 +432,7 @@ class WritableRpcEngine implements RpcEngine {
       } else {
         // can't get JSON details, so just report call.toString() along with 
         // a more generic tag.
-        responseInfo.put("call", call.toString());
+        //responseInfo.put("call", call.toString());
         LOG.warn("(response" + tag + "): " +
             mapper.writeValueAsString(responseInfo));
       }
