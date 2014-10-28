@@ -889,7 +889,9 @@ public class Store extends SchemaConfigured implements HeapSize {
           do {
             hasMore = scanner.next(kvs, compactionKVMax);
             if (!kvs.isEmpty()) {
-              for (KeyValue kv : kvs) {
+              int listSize = kvs.size();
+              for (int i = 0; i < listSize; i++) {
+            	KeyValue kv = kvs.get(i);  
                 // If we know that this KV is going to be included always, then let us
                 // set its memstoreTS to 0. This will help us save space when writing to disk.
                 if (kv.getMemstoreTS() <= smallestReadPoint) {
