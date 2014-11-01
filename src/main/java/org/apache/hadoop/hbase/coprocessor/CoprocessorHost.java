@@ -92,7 +92,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   // unique file prefix to use for local copies of jars when classloading
   protected String pathPrefix;
   protected volatile int loadSequence;
-  protected Iterator<E> coprocessorsIterator;
+  protected List<E> coprocessorList = new ArrayList<E>();
 
   public CoprocessorHost() {
     pathPrefix = UUID.randomUUID().toString();
@@ -224,11 +224,17 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     E env = loadInstance(implClass, priority, conf);
     coprocessors.add(env);
     // Update iterator
-    if(coprocessorsIterator != null){
-    	coprocessorsIterator = coprocessors.iterator();
-    }
+    updateCoprocessorList();
   }
 
+  protected void updateCoprocessorList()
+  {
+	  coprocessorList.clear();
+	  for( E env: coprocessors){
+		  coprocessorList.add(env);
+	  }
+  }
+  
   /**
    * @param implClass Implementation class
    * @param priority priority
