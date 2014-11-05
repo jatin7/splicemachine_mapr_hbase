@@ -1423,6 +1423,14 @@ public class Store extends SchemaConfigured implements HeapSize {
             ImmutableList.copyOf(filesToCompact.getFilesToCompact()), request);
         }
 
+        // Check if we still have reference files not in this selection list and
+        // split for the region is recommended. We need this to guarantee that we do 
+        // not have orphan references once store size exceeds recommended maximum 
+        // to make sure that splits are possible. We do override overriding
+        // coprocessor. Is it bad?
+        
+        addReferenceFilesIfNeeded(filesToCompact);
+        
         // no files to compact
         if (filesToCompact.getFilesToCompact().isEmpty()) {
           return null;
@@ -1466,7 +1474,33 @@ public class Store extends SchemaConfigured implements HeapSize {
     return request;
   }
 
-  public void finishRequest(CompactionRequest cr) {
+  private void addReferenceFilesIfNeeded(CompactSelection filesToCompact) {
+	  // Do nothing if current split policy does not recommend split
+	  if( this.region.getRegionSplitPolicy().isSplitRecommended() == false) return;
+	  
+	  List<StoreFile> toCompactList = filesToCompact.getFilesToCompact();
+	  List<StoreFile> referenceFiles = getListOfReferenceFiles();
+	  for( StoreFile sf: referenceFiles){
+		  if( toCompactList.contains(sf) == false){
+			  LOG.info("[addReferenceFilesIfNeeded]. StoreSize="+getSize()+ " : split is needed. Add Reference: "+ sf);
+			  toCompactList.add(sf);
+		  }
+	  }
+  }
+  
+  private List<StoreFile> getListOfReferenceFiles() {
+	  List<StoreFile> refList = new ArrayList<StoreFile>();
+	  for(StoreFile sf : storefiles){
+		  if (sf.isReference()){
+			  refList.add(sf);
+		  }
+	  }
+	  return refList;
+  }
+
+
+
+public void finishRequest(CompactionRequest cr) {
     CompactionRequest.postRequest(cr);
     cr.finishRequest();
     synchronized (filesCompacting) {
