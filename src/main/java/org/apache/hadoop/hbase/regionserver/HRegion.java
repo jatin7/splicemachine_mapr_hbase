@@ -711,6 +711,11 @@ public class HRegion implements HeapSize { // , Writable{
     return false;
   }
 
+  public RegionSplitPolicy getRegionSplitPolicy()
+  {
+	  return splitPolicy;
+  }
+  
   /**
    * This function will return the HDFS blocks distribution based on the data
    * captured when HFile is created
