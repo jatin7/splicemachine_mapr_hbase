@@ -40,6 +40,8 @@
         <dependencySets>
           <dependencySet>
             <excludes>
+              <exclude>org.slf4j:slf4j-api</exclude>
+              <exclude>org.slf4j:slf4j-log4j12</exclude>
               <exclude>org.apache.hadoop:hadoop-annotations</exclude>
               <exclude>org.apache.hadoop:hadoop-auth</exclude>
               <exclude>org.apache.hadoop:hadoop-client</exclude>
