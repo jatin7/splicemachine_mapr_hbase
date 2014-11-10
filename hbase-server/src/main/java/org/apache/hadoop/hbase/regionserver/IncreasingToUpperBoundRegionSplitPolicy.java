@@ -47,7 +47,7 @@ extends ConstantSizeRegionSplitPolicy {
   protected void configureForRegion(HRegion region) {
     super.configureForRegion(region);
     Configuration conf = getConf();
-    this.initialSize = conf.getLong("hbase.increasing.policy.initial.size", -1);
+    this.initialSize = conf.getLong(HConstants.HBASE_INCREASING_POLICY_INITIAL_SIZE, -1);
     if (this.initialSize > 0) {
       return;
     }
@@ -76,6 +76,32 @@ extends ConstantSizeRegionSplitPolicy {
       if ((!store.canSplit())) {
         return false;
       }
+
+      // Mark if any store is big enough
+      long size = store.getSize();
+      if (size > sizeToCheck) {
+        LOG.debug("ShouldSplit because " + store.getColumnFamilyName() +
+          " size=" + size + ", sizeToCheck=" + sizeToCheck +
+          ", regionsWithCommonTable=" + tableRegionsCount);
+        foundABigStore = true;
+      }
+    }
+
+    return foundABigStore;
+  }
+
+  
+  
+  @Override
+  protected boolean isSplitRecommended() {
+    if (region.shouldForceSplit()) return true;
+    boolean foundABigStore = false;
+    // Get count of regions that have the same common table as this.region
+    int tableRegionsCount = getCountOfCommonTableRegions();
+    // Get size to check
+    long sizeToCheck = getSizeToCheck(tableRegionsCount);
+
+    for (Store store : region.getStores().values()) {
 
       // Mark if any store is big enough
       long size = store.getSize();

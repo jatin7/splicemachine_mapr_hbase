@@ -124,4 +124,8 @@ public abstract class RegionSplitPolicy extends Configured {
           e);
     }
   }
+
+  protected boolean isSplitRecommended() {
+    return shouldSplit();
+  }
 }
