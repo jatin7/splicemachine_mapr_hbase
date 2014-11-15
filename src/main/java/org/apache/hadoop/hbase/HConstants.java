@@ -272,10 +272,10 @@ public final class HConstants {
       "hbase.hregion.memstore.flush.size";
   public static final String HBASE_INCREASING_POLICY_INITIAL_SIZE = 
 		  "hbase.increasing.policy.initial.size";
-  public static final String HBASE_DOUBLEPHASE_POLICY_INITIAL_SIZE = 
-		  "hbase.doublephase.policy.initial.size";
-  public static final String HBASE_DOUBLEPHASE_POLICY_THRESHOLD = 
-		  "hbase.doublephase.policy.threshold";
+  public static final String HBASE_TWOPHASE_POLICY_INITIAL_SIZE = 
+		  "hbase.twophase.policy.initial.size";
+  public static final String HBASE_TWOPHASE_POLICY_THRESHOLD = 
+		  "hbase.twophase.policy.threshold";
   
   /** Default size of a reservation block   */
   public static final int DEFAULT_SIZE_RESERVATION_BLOCK = 1024 * 1024 * 5;
