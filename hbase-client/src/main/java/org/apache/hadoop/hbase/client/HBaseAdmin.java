@@ -413,18 +413,23 @@ public class HBaseAdmin implements Abortable, Closeable {
   private void commonInit(Configuration c)
       throws ZooKeeperConnectionException, MasterNotRunningException {
     this.conf = c;
-    try {
-      tableMappingRule_ = TableMappingRulesFactory.create(conf);
-      if (tableMappingRule_.getClusterType() != ClusterType.HBASE_ONLY) {
-        maprHBaseAdmin_ = adminFactory_.getImplementorInstance(
-          conf.get("hbaseadmin.impl.mapr", "com.mapr.fs.hbase.HBaseAdminImpl"),
-          new Object[] {conf, tableMappingRule_},
-          new Class[] {Configuration.class, BaseTableMappingRules.class});
+    if (BaseTableMappingRules.isInHBaseService()) {
+      tableMappingRule_ = BaseTableMappingRules.INSTANCE;
+    } else {
+      try {
+        tableMappingRule_ = TableMappingRulesFactory.create(conf);
+        if (tableMappingRule_.getClusterType() != ClusterType.HBASE_ONLY) {
+          maprHBaseAdmin_ = adminFactory_.getImplementorInstance(
+              conf.get("hbaseadmin.impl.mapr", "com.mapr.fs.hbase.HBaseAdminImpl"),
+              new Object[] {conf, tableMappingRule_},
+              new Class[] {Configuration.class, BaseTableMappingRules.class});
+        }
+      } catch (Exception e) {
+        throw (e instanceof RuntimeException) ? (RuntimeException)e : new RuntimeException(e);
       }
-    } catch (Exception e) {
-      throw (e instanceof RuntimeException) ? (RuntimeException)e : new RuntimeException(e);
     }
-    if (c.getBoolean(HBASE_ADMIN_CONNECT_AT_CONSTRUCTION, false)) {
+    if (tableMappingRule_.getClusterType() == ClusterType.HBASE_ONLY
+        || c.getBoolean(HBASE_ADMIN_CONNECT_AT_CONSTRUCTION, false)) {
       ensureConnectedToHBase();
     }
   }

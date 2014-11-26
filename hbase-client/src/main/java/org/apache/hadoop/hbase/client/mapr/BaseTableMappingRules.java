@@ -1,17 +1,19 @@
 package org.apache.hadoop.hbase.client.mapr;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 public class BaseTableMappingRules {
   public static final String HBASE_AVAILABLE = "hbase.available";
 
   public static final String MAPRFS_PREFIX = "maprfs://";
   public static final String HBASE_PREFIX = "hbase://";
-  
-  static final BaseTableMappingRules INSTANCE = new BaseTableMappingRules();
+
+  @InterfaceAudience.Private
+  public static final BaseTableMappingRules INSTANCE = new BaseTableMappingRules();
+
+  static protected volatile boolean inHBaseService_ = false;
 
   /**
    * Describe the type of cluster based on the running services.
@@ -117,4 +119,24 @@ public class BaseTableMappingRules {
   public Path getMaprTablePath(String tableName) {
     return null;
   }
+
+  /**
+   * Notify mapping rules that the process is either HBase master or
+   * region server service and no translation from a table name to an
+   * MapR-DB table path be performed.
+   */
+  @InterfaceAudience.Private
+  public static void setInHBaseService() {
+      inHBaseService_ = true;
+  }
+
+  /**
+   * @return {@code true} if the process is either HBase master or region
+   * server service.
+   */
+  @InterfaceAudience.Private
+  public static boolean isInHBaseService() {
+    return inHBaseService_;
+  }
+
 }

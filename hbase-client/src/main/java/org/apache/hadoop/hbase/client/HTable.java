@@ -409,7 +409,8 @@ public class HTable implements HTableInterface {
   private AbstractHTable initIfMapRTable(final Configuration conf,
       final TableName tableName) throws IOException {
     tableMappingRule_ = TableMappingRulesFactory.create(conf);
-    if (tableMappingRule_.isMapRTable(tableName)) {
+    if (!BaseTableMappingRules.isInHBaseService()
+        && tableMappingRule_.isMapRTable(tableName)) {
       try {
         configuration = conf;
         if (this.connection instanceof HConnectionImplementation) {
