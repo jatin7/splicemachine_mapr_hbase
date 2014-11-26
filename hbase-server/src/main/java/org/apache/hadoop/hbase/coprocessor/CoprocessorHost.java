@@ -832,7 +832,6 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       LOG.error("Removing coprocessor '" + env.toString() + "' from " +
           "environment because it threw:  " + e,e);
       coprocessors.remove(env);
-      updateCoprocessorList();
       try {
         shutdown(env);
       } catch (Exception x) {
