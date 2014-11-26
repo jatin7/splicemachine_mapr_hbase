@@ -444,8 +444,7 @@ for(int i=0; i < coprocessorList.size(); i++){
       CompactionRequest request) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     boolean bypass = false;
-    for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -543,8 +542,7 @@ for(int i=0; i < coprocessorList.size(); i++){
   public InternalScanner preFlushScannerOpen(Store store, KeyValueScanner memstoreScanner) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     InternalScanner s = null;
-    for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -930,8 +928,7 @@ for(int i=0; i < coprocessorList.size(); i++){
       final MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp) throws IOException {
     boolean bypass = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-    for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -955,8 +952,7 @@ for(int i=0; i < coprocessorList.size(); i++){
   public void postBatchMutate(
       final MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-    for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -1443,8 +1439,7 @@ for(int i=0; i < coprocessorList.size(); i++){
       short length) throws IOException {
     boolean hasMore = true; // By default assume more rows there.
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-    for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -1624,8 +1619,7 @@ for(int i=0; i < coprocessorList.size(); i++){
   
   public void preLockRow(byte[] regionName, byte[] row) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-    for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         ((RegionObserver) env.getInstance()).preLockRow(ctx, regionName, row);
@@ -1638,8 +1632,7 @@ for(int i=0; i < coprocessorList.size(); i++){
 
   public void preUnLockRow(byte[] regionName, long lockId) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-    for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         ((RegionObserver) env.getInstance()).preUnlockRow(ctx, regionName, lockId);
