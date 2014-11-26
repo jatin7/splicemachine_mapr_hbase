@@ -39,10 +39,10 @@ import org.apache.hadoop.hbase.util.Bytes;
  * HREGION_MAX_FILESIZE
  *  
  */
-public class TwoPhaseRegionSplitPolicy
+public class DoublePhaseRegionSplitPolicy
 extends ConstantSizeRegionSplitPolicy {
   static final Log LOG =
-    LogFactory.getLog(TwoPhaseRegionSplitPolicy.class);
+    LogFactory.getLog(DoublePhaseRegionSplitPolicy.class);
   private long initialSize;
   private int  regionsThreshold;
   private boolean secondTryDone = false;
