@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -92,7 +91,6 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   // unique file prefix to use for local copies of jars when classloading
   protected String pathPrefix;
   protected volatile int loadSequence;
-  protected Iterator<E> coprocessorsIterator;
 
   public CoprocessorHost() {
     pathPrefix = UUID.randomUUID().toString();
@@ -213,7 +211,6 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   }
 
   /**
-   * This is used only for testing
    * @param implClass Implementation class
    * @param priority priority
    * @param conf configuration
@@ -223,10 +220,6 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       throws IOException {
     E env = loadInstance(implClass, priority, conf);
     coprocessors.add(env);
-    // Update iterator
-    if(coprocessorsIterator != null){
-    	coprocessorsIterator = coprocessors.iterator();
-    }
   }
 
   /**
