@@ -227,7 +227,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     updateCoprocessorList();
   }
 
-  protected synchronized void updateCoprocessorList()
+  protected void updateCoprocessorList()
   {
 	  coprocessorList.clear();
 	  for( E env: coprocessors){
@@ -764,7 +764,6 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       LOG.error("Removing coprocessor '" + env.toString() + "' from " +
           "environment because it threw:  " + e,e);
       coprocessors.remove(env);
-      updateCoprocessorList();
       try {
         shutdown(env);
       } catch (Exception x) {
