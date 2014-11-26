@@ -153,7 +153,9 @@ public class RegionCoprocessorHost
 
     // load Coprocessor From HDFS
     loadTableCoprocessors(conf);
-    updateCoprocessorList();
+    
+    // update iterator
+    coprocessorsIterator = coprocessors.iterator();
   }
 
   void loadTableCoprocessors(final Configuration conf) {
@@ -272,9 +274,9 @@ public class RegionCoprocessorHost
    * Invoked before a region open
    */
   public void preOpen(){
-    ObserverContext<RegionCoprocessorEnvironment> ctx = null;   
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i); 
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
          try {
@@ -294,8 +296,8 @@ for(int i=0; i < coprocessorList.size(); i++){
    */
   public void postOpen(){
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -316,8 +318,8 @@ for(int i=0; i < coprocessorList.size(); i++){
    */
   public void preClose(boolean abortRequested) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -335,8 +337,8 @@ for(int i=0; i < coprocessorList.size(); i++){
    */
   public void postClose(boolean abortRequested){
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -358,8 +360,8 @@ for(int i=0; i < coprocessorList.size(); i++){
       ScanType scanType, long earliestPutTs, CompactionRequest request) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     InternalScanner s = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -389,8 +391,8 @@ for(int i=0; i < coprocessorList.size(); i++){
       CompactionRequest request) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     boolean bypass = false;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -417,8 +419,8 @@ for(int i=0; i < coprocessorList.size(); i++){
   public void postCompactSelection(Store store, ImmutableList<StoreFile> selected,
       CompactionRequest request) {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -471,8 +473,8 @@ for(int i=0; i < coprocessorList.size(); i++){
   public void postCompact(Store store, StoreFile resultFile, CompactionRequest request)
       throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -494,8 +496,8 @@ for(int i=0; i < coprocessorList.size(); i++){
   public InternalScanner preFlush(Store store, InternalScanner scanner) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     boolean bypass = false;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -519,8 +521,8 @@ for(int i=0; i < coprocessorList.size(); i++){
    */
   public void preFlush() throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -564,8 +566,8 @@ for(int i=0; i < coprocessorList.size(); i++){
    */
   public void postFlush() throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -586,8 +588,8 @@ for(int i=0; i < coprocessorList.size(); i++){
    */
   public void postFlush(final Store store, final StoreFile storeFile) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -608,8 +610,8 @@ for(int i=0; i < coprocessorList.size(); i++){
    */
   public void preSplit() throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -632,8 +634,8 @@ for(int i=0; i < coprocessorList.size(); i++){
    */
   public void postSplit(HRegion l, HRegion r) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -661,8 +663,8 @@ for(int i=0; i < coprocessorList.size(); i++){
       final Result result) throws IOException {
     boolean bypass = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -689,8 +691,8 @@ for(int i=0; i < coprocessorList.size(); i++){
   public void postGetClosestRowBefore(final byte[] row, final byte[] family,
       final Result result) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -715,8 +717,8 @@ for(int i=0; i < coprocessorList.size(); i++){
       throws IOException {
     boolean bypass = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -741,8 +743,8 @@ for(int i=0; i < coprocessorList.size(); i++){
   public void postGet(final Get get, final List<KeyValue> results)
   throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -767,8 +769,8 @@ for(int i=0; i < coprocessorList.size(); i++){
     boolean bypass = false;
     boolean exists = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -794,8 +796,8 @@ for(int i=0; i < coprocessorList.size(); i++){
   public boolean postExists(final Get get, boolean exists)
       throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -822,8 +824,8 @@ for(int i=0; i < coprocessorList.size(); i++){
       final boolean writeToWAL) throws IOException {
     boolean bypass = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -849,8 +851,8 @@ for(int i=0; i < coprocessorList.size(); i++){
   public void postPut(Put put, WALEdit edit,
       final boolean writeToWAL) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -876,8 +878,8 @@ for(int i=0; i < coprocessorList.size(); i++){
       final boolean writeToWAL) throws IOException {
     boolean bypass = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -903,8 +905,8 @@ for(int i=0; i < coprocessorList.size(); i++){
   public void postDelete(Delete delete, WALEdit edit,
       final boolean writeToWAL) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -985,8 +987,8 @@ for(int i=0; i < coprocessorList.size(); i++){
     boolean bypass = false;
     boolean result = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -1021,8 +1023,8 @@ for(int i=0; i < coprocessorList.size(); i++){
       boolean result)
     throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -1057,8 +1059,8 @@ for(int i=0; i < coprocessorList.size(); i++){
     boolean bypass = false;
     boolean result = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -1091,8 +1093,8 @@ for(int i=0; i < coprocessorList.size(); i++){
       boolean result)
     throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -1125,8 +1127,8 @@ for(int i=0; i < coprocessorList.size(); i++){
       throws IOException {
     boolean bypass = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -1158,8 +1160,8 @@ for(int i=0; i < coprocessorList.size(); i++){
       final byte [] qualifier, final long amount, final boolean writeToWAL,
       long result) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -1187,8 +1189,8 @@ for(int i=0; i < coprocessorList.size(); i++){
     boolean bypass = false;
     Result result = null;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -1216,8 +1218,8 @@ for(int i=0; i < coprocessorList.size(); i++){
     boolean bypass = false;
     Result result = null;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -1242,8 +1244,8 @@ for(int i=0; i < coprocessorList.size(); i++){
   public void postAppend(final Append append, Result result)
       throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -1266,8 +1268,8 @@ for(int i=0; i < coprocessorList.size(); i++){
   public Result postIncrement(final Increment increment, Result result)
       throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -1293,8 +1295,8 @@ for(int i=0; i < coprocessorList.size(); i++){
     boolean bypass = false;
     RegionScanner s = null;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -1319,8 +1321,8 @@ for(int i=0; i < coprocessorList.size(); i++){
       final NavigableSet<byte[]> targetCols) throws IOException {
     KeyValueScanner s = null;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -1346,8 +1348,8 @@ for(int i=0; i < coprocessorList.size(); i++){
   public RegionScanner postScannerOpen(final Scan scan, RegionScanner s)
       throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -1376,8 +1378,8 @@ for(int i=0; i < coprocessorList.size(); i++){
     boolean bypass = false;
     boolean hasNext = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -1407,8 +1409,8 @@ for(int i=0; i < coprocessorList.size(); i++){
       final List<Result> results, final int limit, boolean hasMore)
       throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -1465,8 +1467,8 @@ for(int i=0; i < coprocessorList.size(); i++){
       throws IOException {
     boolean bypass = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -1490,8 +1492,8 @@ for(int i=0; i < coprocessorList.size(); i++){
   public void postScannerClose(final InternalScanner s)
       throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -1517,8 +1519,8 @@ for(int i=0; i < coprocessorList.size(); i++){
       WALEdit logEdit) throws IOException {
     boolean bypass = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -1545,8 +1547,8 @@ for(int i=0; i < coprocessorList.size(); i++){
   public void postWALRestore(HRegionInfo info, HLogKey logKey,
       WALEdit logEdit) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -1570,8 +1572,8 @@ for(int i=0; i < coprocessorList.size(); i++){
   public boolean preBulkLoadHFile(List<Pair<byte[], String>> familyPaths) throws IOException {
     boolean bypass = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
@@ -1598,8 +1600,8 @@ for(int i=0; i < coprocessorList.size(); i++){
   public boolean postBulkLoadHFile(List<Pair<byte[], String>> familyPaths, boolean hasLoaded)
       throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
-for(int i=0; i < coprocessorList.size(); i++){
-	  RegionEnvironment env = coprocessorList.get(i);
+    while( coprocessorsIterator.hasNext()) {
+      RegionEnvironment env = coprocessorsIterator.next();
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
