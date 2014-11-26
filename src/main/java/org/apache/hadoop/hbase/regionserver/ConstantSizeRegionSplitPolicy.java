@@ -48,22 +48,6 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
   }
 
   @Override
-protected boolean isSplitRecommended() {
-	    boolean force = region.shouldForceSplit();
-	    boolean foundABigStore = false;
-
-	    for (Store store : region.getStores().values()) {
-	      // Mark if any store is big enough
-	      if (store.getSize() > desiredMaxFileSize) {
-	        foundABigStore = true;
-	        break;
-	      }
-	    }
-
-	    return foundABigStore || force;
-}
-
-@Override
   protected boolean shouldSplit() {
     boolean force = region.shouldForceSplit();
     boolean foundABigStore = false;
