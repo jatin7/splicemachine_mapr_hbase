@@ -53,7 +53,7 @@ extends ConstantSizeRegionSplitPolicy {
   protected void configureForRegion(HRegion region) {
     super.configureForRegion(region);
     Configuration conf = getConf();
-    this.initialSize = conf.getLong(HConstants.HBASE_TWOPHASE_POLICY_INITIAL_SIZE, -1);
+    this.initialSize = conf.getLong(HConstants.HBASE_DOUBLEPHASE_POLICY_INITIAL_SIZE, -1);
     if (this.initialSize < 0) {
       HTableDescriptor desc = region.getTableDesc();
       if (desc != null) {
@@ -66,7 +66,7 @@ extends ConstantSizeRegionSplitPolicy {
       }
     }
     
-    this.regionsThreshold = conf.getInt(HConstants.HBASE_TWOPHASE_POLICY_THRESHOLD, -1);
+    this.regionsThreshold = conf.getInt(HConstants.HBASE_DOUBLEPHASE_POLICY_THRESHOLD, -1);
     if(this.regionsThreshold < 0){
       // get the cluster size
       initDefaultRegionsThreshold(); 
@@ -128,7 +128,7 @@ extends ConstantSizeRegionSplitPolicy {
   private void checkDefaultRegionsThreshold() {
     if( secondTryDone == true) return;
     secondTryDone = true;
-    if( region.getConf().getInt(HConstants.HBASE_TWOPHASE_POLICY_THRESHOLD, -1) > 0)
+    if( region.getConf().getInt(HConstants.HBASE_DOUBLEPHASE_POLICY_THRESHOLD, -1) > 0)
     {
       return;
     }
