@@ -1398,6 +1398,15 @@ public class HStore implements Store {
         }
 
         // Finally, we have the resulting files list. Check if we have any files at all.
+        
+        // Check if we still have reference files not in this selection list and
+        // split for the region is recommended. We need this to guarantee that we do
+        // not have orphan references once store size exceeds recommended maximum
+        // to make sure that splits are possible. We do override overriding
+        // coprocessor. Is it bad?
+        
+        addReferenceFilesIfNeeded(compaction.getRequest().getFiles());
+                        
         final Collection<StoreFile> selectedFiles = compaction.getRequest().getFiles();
         if (selectedFiles.isEmpty()) {
           return null;
@@ -1433,6 +1442,40 @@ public class HStore implements Store {
     return compaction;
   }
 
+  private void addReferenceFilesIfNeeded(Collection<StoreFile> toCompactList) {
+    // Do nothing if current split policy does not recommend split
+    RegionSplitPolicy splitPolicy = this.region.getRegionSplitPolicy();
+    if ( isTempTable() || splitPolicy == null || splitPolicy.isSplitRecommended() == false) return;
+    List<StoreFile> referenceFiles = getListOfReferenceFiles();
+    for (StoreFile sf : referenceFiles) {
+      if (toCompactList.contains(sf) == false) {
+        LOG.info("[addReferenceFilesIfNeeded]. StoreSize=" + getSize()
+            + " : split is needed. Add Reference: " + sf);
+        toCompactList.add(sf);
+      }
+    }
+  }
+
+  private boolean isTempTable() {
+    byte[] name = this.region.getRegionName();
+    // SPLICE_TEMP
+    int len = "SPLICE_TEMP".length();
+    if(name.length < len) return false;
+    String sName = new String(name, 0, len);
+    return sName.equals("SPLICE_TEMP");
+  }
+
+  private List<StoreFile> getListOfReferenceFiles() {
+    List<StoreFile> refList = new ArrayList<StoreFile>();
+    Collection<StoreFile> storefiles = getStorefiles();
+    for (StoreFile sf : storefiles) {
+      if (sf.isReference()) {
+        refList.add(sf);
+      }
+    }
+    return refList;
+  }
+  
   @Override
   public void cancelRequestedCompaction(CompactionContext compaction) {
     finishCompactionRequest(compaction.getRequest());
