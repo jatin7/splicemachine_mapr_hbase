@@ -1441,29 +1441,47 @@ public class HStore implements Store {
     this.region.reportCompactionRequestStart(compaction.getRequest().isMajor());
     return compaction;
   }
-
+  
+  private boolean isInSplitTxCall()
+  {
+     String look = "org.apache.hadoop.hbase.regionserver.SplitTransaction";
+     StackTraceElement[] stackTrace= Thread.currentThread().getStackTrace();
+     for(int i=0; i < stackTrace.length; i++)
+     {
+       StackTraceElement el = stackTrace[i];
+         if( el.toString().indexOf(look) >= 0) {
+           return true;
+         }
+     }
+     return false;
+  }
+  
   private void addReferenceFilesIfNeeded(Collection<StoreFile> toCompactList) {
     // Do nothing if current split policy does not recommend split
     RegionSplitPolicy splitPolicy = this.region.getRegionSplitPolicy();
-    if ( isTempTable() || splitPolicy == null || splitPolicy.isSplitRecommended() == false) return;
+    if (  splitPolicy == null || splitPolicy.isSplitRecommended() == false) return;
+    if( isInSplitTxCall()) {
+      LOG.info("Add Reference Files::Disabled:: split tx");
+      return;
+    }
+    
     List<StoreFile> referenceFiles = getListOfReferenceFiles();
+    // Do not be overly aggressive- do not add all reference files at once
+    // add just maximum 2-3
+    int addedRefs = 0;
+    int maxRefs = 2;    
     for (StoreFile sf : referenceFiles) {
-      if (toCompactList.contains(sf) == false) {
-        LOG.info("[addReferenceFilesIfNeeded]. StoreSize=" + getSize()
+      if (toCompactList.contains(sf) == false 
+          && this.filesCompacting.contains(sf) == false) {
+        LOG.info("Add Reference Files::Active:: StoreSize=" + getSize()
             + " : split is needed. Add Reference: " + sf);
         toCompactList.add(sf);
+        addedRefs ++;
+        if(addedRefs == maxRefs) break;
       }
     }
   }
 
-  private boolean isTempTable() {
-    byte[] name = this.region.getRegionName();
-    // SPLICE_TEMP
-    int len = "SPLICE_TEMP".length();
-    if(name.length < len) return false;
-    String sName = new String(name, 0, len);
-    return sName.equals("SPLICE_TEMP");
-  }
 
   private List<StoreFile> getListOfReferenceFiles() {
     List<StoreFile> refList = new ArrayList<StoreFile>();
