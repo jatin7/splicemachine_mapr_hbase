@@ -110,11 +110,12 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
     // or if we do not have too many files to compact and this was requested
     // as a major compaction.
     // Or, if there are any references among the candidates.
+    boolean afterSplitRequest = StoreUtils.hasReferences(candidateSelection);
     boolean majorCompaction = (
       (forceMajor && isUserCompaction)
       || ((forceMajor || isMajorCompaction(candidateSelection))
           && (candidateSelection.size() < comConf.getMaxFilesToCompact()))
-      || StoreUtils.hasReferences(candidateSelection)
+      || afterSplitRequest
       );
 
     if (!majorCompaction) {
@@ -123,7 +124,8 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
       candidateSelection = applyCompactionPolicy(candidateSelection, mayUseOffPeak, mayBeStuck);
       candidateSelection = checkMinFilesCriteria(candidateSelection);
     }
-    candidateSelection = removeExcessFiles(candidateSelection, isUserCompaction, majorCompaction);
+    candidateSelection = afterSplitRequest? candidateSelection:
+		removeExcessFiles(candidateSelection, isUserCompaction, majorCompaction);
     CompactionRequest result = new CompactionRequest(candidateSelection);
     result.setOffPeak(!candidateSelection.isEmpty() && !majorCompaction && mayUseOffPeak);
     return result;

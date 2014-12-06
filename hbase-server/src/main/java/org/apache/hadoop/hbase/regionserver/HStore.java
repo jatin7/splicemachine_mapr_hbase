@@ -1397,16 +1397,6 @@ public class HStore implements Store {
               baseRequest.combineWith(compaction.getRequest()));
         }
 
-        // Finally, we have the resulting files list. Check if we have any files at all.
-        
-        // Check if we still have reference files not in this selection list and
-        // split for the region is recommended. We need this to guarantee that we do
-        // not have orphan references once store size exceeds recommended maximum
-        // to make sure that splits are possible. We do override overriding
-        // coprocessor. Is it bad?
-        
-        addReferenceFilesIfNeeded(compaction.getRequest().getFiles());
-                        
         final Collection<StoreFile> selectedFiles = compaction.getRequest().getFiles();
         if (selectedFiles.isEmpty()) {
           return null;
@@ -1442,57 +1432,6 @@ public class HStore implements Store {
     return compaction;
   }
   
-  private boolean isInSplitTxCall()
-  {
-     String look = "org.apache.hadoop.hbase.regionserver.SplitTransaction";
-     StackTraceElement[] stackTrace= Thread.currentThread().getStackTrace();
-     for(int i=0; i < stackTrace.length; i++)
-     {
-       StackTraceElement el = stackTrace[i];
-         if( el.toString().indexOf(look) >= 0) {
-           return true;
-         }
-     }
-     return false;
-  }
-  
-  private void addReferenceFilesIfNeeded(Collection<StoreFile> toCompactList) {
-    // Do nothing if current split policy does not recommend split
-    RegionSplitPolicy splitPolicy = this.region.getRegionSplitPolicy();
-    if (  splitPolicy == null || splitPolicy.isSplitRecommended() == false) return;
-    if( isInSplitTxCall()) {
-      LOG.info("Add Reference Files::Disabled:: split tx");
-      return;
-    }
-    
-    List<StoreFile> referenceFiles = getListOfReferenceFiles();
-    // Do not be overly aggressive- do not add all reference files at once
-    // add just maximum 2-3
-    int addedRefs = 0;
-    int maxRefs = 2;    
-    for (StoreFile sf : referenceFiles) {
-      if (toCompactList.contains(sf) == false 
-          && this.filesCompacting.contains(sf) == false) {
-        LOG.info("Add Reference Files::Active:: StoreSize=" + getSize()
-            + " : split is needed. Add Reference: " + sf);
-        toCompactList.add(sf);
-        addedRefs ++;
-        if(addedRefs == maxRefs) break;
-      }
-    }
-  }
-
-
-  private List<StoreFile> getListOfReferenceFiles() {
-    List<StoreFile> refList = new ArrayList<StoreFile>();
-    Collection<StoreFile> storefiles = getStorefiles();
-    for (StoreFile sf : storefiles) {
-      if (sf.isReference()) {
-        refList.add(sf);
-      }
-    }
-    return refList;
-  }
   
   @Override
   public void cancelRequestedCompaction(CompactionContext compaction) {
