@@ -90,30 +90,6 @@ extends ConstantSizeRegionSplitPolicy {
     return foundABigStore;
   }
 
-  @Override
-  protected boolean isSplitRecommended() {
-    if (region.shouldForceSplit()) return true;
-    boolean foundABigStore = false;
-    // Get count of regions that have the same common table as this.region
-    int tableRegionsCount = getCountOfCommonTableRegions();
-    // Get size to check
-    long sizeToCheck = getSizeToCheck(tableRegionsCount);
-
-    for (Store store : region.getStores().values()) {
-
-      // Mark if any store is big enough
-      long size = store.getSize();
-      if (size > sizeToCheck) {
-        LOG.debug("ShouldSplit because " + store.getColumnFamilyName() +
-          " size=" + size + ", sizeToCheck=" + sizeToCheck +
-          ", regionsWithCommonTable=" + tableRegionsCount);
-        foundABigStore = true;
-      }
-    }
-
-    return foundABigStore;
-  }
-
   /**
    * @return Region max size or <code>count of regions squared * flushsize, which ever is
    * smaller; guard against there being zero regions on this server.

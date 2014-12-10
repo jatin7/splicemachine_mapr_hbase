@@ -63,14 +63,6 @@ public abstract class RegionSplitPolicy extends Configured {
    */
   protected abstract boolean shouldSplit();
 
-   /**
-   * Almost identical to shouldSplit. The only difference:
-   * it does not check if stores can split (ignores reference files).
-   * @return
-   */
-  protected boolean isSplitRecommended(){
-         return shouldSplit();
-  }
   /**
    * @return the key at which the region should be split, or null
    * if it cannot be split. This will only be called if shouldSplit
