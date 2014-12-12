@@ -645,6 +645,10 @@ public class HRegion implements HeapSize { // , Writable{
           HConstants.DEFAULT_DISALLOW_WRITES_IN_RECOVERING_CONFIG);
   }
 
+  public Configuration getConf() {
+    return conf;
+  }
+
   void setHTableSpecificConf() {
     if (this.htableDescriptor == null) return;
     long flushSize = this.htableDescriptor.getMemStoreFlushSize();

@@ -331,6 +331,12 @@ public final class HConstants {
   /** Conf key for the memstore size at which we flush the memstore */
   public static final String HREGION_MEMSTORE_FLUSH_SIZE =
       "hbase.hregion.memstore.flush.size";
+  public static final String HBASE_INCREASING_POLICY_INITIAL_SIZE = 
+      "hbase.increasing.policy.initial.size";
+  public static final String HBASE_DOUBLEPHASE_POLICY_INITIAL_SIZE = 
+      "hbase.doublephase.policy.initial.size";
+  public static final String HBASE_DOUBLEPHASE_POLICY_THRESHOLD = 
+      "hbase.doublephase.policy.threshold"; 
 
   public static final String HREGION_EDITS_REPLAY_SKIP_ERRORS =
       "hbase.hregion.edits.replay.skip.errors";

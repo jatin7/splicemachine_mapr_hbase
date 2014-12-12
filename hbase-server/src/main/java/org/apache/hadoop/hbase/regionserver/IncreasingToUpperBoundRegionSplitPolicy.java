@@ -47,7 +47,7 @@ extends ConstantSizeRegionSplitPolicy {
   protected void configureForRegion(HRegion region) {
     super.configureForRegion(region);
     Configuration conf = getConf();
-    this.initialSize = conf.getLong("hbase.increasing.policy.initial.size", -1);
+    this.initialSize = conf.getLong(HConstants.HBASE_INCREASING_POLICY_INITIAL_SIZE, -1);
     if (this.initialSize > 0) {
       return;
     }
@@ -89,6 +89,7 @@ extends ConstantSizeRegionSplitPolicy {
 
     return foundABigStore;
   }
+
 
   /**
    * @return Region max size or <code>count of regions squared * flushsize, which ever is
