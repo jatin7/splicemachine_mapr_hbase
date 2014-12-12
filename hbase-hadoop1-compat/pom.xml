@@ -21,7 +21,7 @@ limitations under the License.
   <parent>
     <artifactId>hbase</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>0.98.4-mapr4.0.1-splice1.0.4</version>
+    <version>0.98.4-mapr4.0.1-splice1.0.5-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
 
