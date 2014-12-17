@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
@@ -33,8 +35,8 @@ import org.apache.hadoop.hbase.client.Scan;
  * {@link #checkOnlyMemStore()} or to only read from StoreFiles with
  * {@link #checkOnlyStoreFiles()}.
  */
-@InterfaceAudience.Private
-class InternalScan extends Scan {
+@InterfaceAudience.Public
+public class InternalScan extends Scan {
   private boolean memOnly = false;
   private boolean filesOnly = false;
 
@@ -44,7 +46,12 @@ class InternalScan extends Scan {
   public InternalScan(Get get) {
     super(get);
   }
-
+  
+  public InternalScan(Scan scan) throws IOException
+  { 
+    super(scan); 
+  }
+  
   /**
    * StoreFiles will not be scanned. Only MemStore will be scanned.
    */
