@@ -48,6 +48,8 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.mapr.BaseTableMappingRules;
+import org.apache.hadoop.hbase.client.mapr.TableMappingRulesFactory;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.hadoopbackport.JarFinder;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -74,6 +76,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
 @InterfaceStability.Stable
 public class TableMapReduceUtil {
   static Log LOG = LogFactory.getLog(TableMapReduceUtil.class);
+
+  public static final String MAPR_TABLE_PATH_CONF_KEY = "hbase.mapreduce.mapr.tablepath";
 
   /**
    * Use this before submitting a TableMap job. It will appropriately set up
@@ -502,6 +506,25 @@ public class TableMapReduceUtil {
     }
 
     return ProtobufUtil.toScan(scan);
+  }
+
+  public static String getMapRTablePath(final Configuration conf) {
+    return conf.get(MAPR_TABLE_PATH_CONF_KEY);
+  }
+
+  public static void configureMapRTablePath(Job job, String tableName)
+  throws IOException {
+    Configuration conf = job.getConfiguration();
+
+    BaseTableMappingRules tableMappingRule =  TableMappingRulesFactory.create(conf);
+    if (!tableMappingRule.isMapRTable(tableName))
+      return;
+
+    Path tablePath = tableMappingRule.getMaprTablePath(tableName.getBytes());
+    conf.set(MAPR_TABLE_PATH_CONF_KEY, tablePath.toString());
+
+    addDependencyJars(conf, tableMappingRule.getClass());
+    LOG.info("Configured '" + MAPR_TABLE_PATH_CONF_KEY + "' to " + tablePath);
   }
 
   /**
