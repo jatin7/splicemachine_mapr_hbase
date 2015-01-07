@@ -290,6 +290,12 @@ public class HFileOutputFormat2
     };
   }
 
+  @Deprecated
+  public static void configureMapRTablePath(Job job, String tableName)
+  throws IOException {
+    TableMapReduceUtil.configureMapRTablePath(job, tableName);
+  }
+
   /*
    * Data structure to hold a Writer and amount of data written on it.
    */
