@@ -405,6 +405,8 @@ public class ImportTsv extends Configured implements Tool {
     if (actualSeparator != null) {
       conf.set(SEPARATOR_CONF_KEY,
                Base64.encodeBytes(actualSeparator.getBytes()));
+    } else {
+      actualSeparator = ImportTsv.DEFAULT_SEPARATOR;
     }
 
     // See if a non-default Mapper was set
@@ -426,6 +428,16 @@ public class ImportTsv extends Configured implements Tool {
       String fileLoc = conf.get(CREDENTIALS_LOCATION);
       Credentials cred = Credentials.readTokenStorageFile(new Path(fileLoc), conf);
       job.getCredentials().addAll(cred);
+    }
+
+    TableMapReduceUtil.configureMapRTablePath(job, tableName);
+    if (TableMapReduceUtil.getMapRTablePath(job.getConfiguration()) != null) {
+      TsvParser parser = new ImportTsv.TsvParser(
+          conf.get(ImportTsv.COLUMNS_CONF_KEY), actualSeparator);
+      if (parser.hasCellVisibility()) {
+        System.err.println("ERROR: HBASE_CELL_VISIBILITY can not be used with MapR-DB tables.");
+        System.exit(-1);
+      }
     }
 
     if (hfileOutPath != null) {
