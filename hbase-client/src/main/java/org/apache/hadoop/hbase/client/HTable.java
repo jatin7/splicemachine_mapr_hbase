@@ -1437,6 +1437,9 @@ public class HTable implements HTableInterface {
   public boolean checkAndMutate(final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final byte [] value, final RowMutations rm)
   throws IOException {
+    if (maprTable_ != null) {
+      return maprTable_.checkAndMutate(row, family, qualifier, compareOp, value, rm);
+    }
     RegionServerCallable<Boolean> callable =
         new RegionServerCallable<Boolean>(connection, getName(), row) {
           @Override

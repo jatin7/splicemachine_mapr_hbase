@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -171,5 +171,10 @@ public abstract class AbstractHTable {
   public abstract void setAutoFlush(boolean autoFlush);
 
   public abstract void setAutoFlush(boolean autoFlush, boolean clearBufferOnFail);
+
+  public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
+      CompareOp compareOp, byte[] value, RowMutations rm) throws IOException {
+    throw new UnsupportedOperationException("checkAndMutate() is not supported for this version of MapR-DB tables.");
+  }
 
 }
