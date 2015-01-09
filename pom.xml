@@ -924,6 +924,7 @@
     <!-- Dependencies -->
     <!-- Latest versions of Hadoop distributed with MapR -->
     <mapr.hadoop.version>1.0.3-mapr-3.1.1</mapr.hadoop.version>
+    <mapr.hadoop-two.version>4.0.1-mapr</mapr.hadoop-two.version>
     <hadoop-two.version>2.4.1-mapr-1408</hadoop-two.version>
     <hadoop-one.version>1.2.1</hadoop-one.version>
     <commons-cli.version>1.2</commons-cli.version>
