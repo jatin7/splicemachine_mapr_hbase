@@ -59,7 +59,8 @@ typedef struct hb_cell_type {
   /* timestamp */
   int64_t ts;
 
-  /* for internal use, applications should not set or alter this variable */
+  /* for internal use, applications should not set or alter these variables */
+  int64_t flags_;
   void   *private_;
 } hb_cell_t;
 
