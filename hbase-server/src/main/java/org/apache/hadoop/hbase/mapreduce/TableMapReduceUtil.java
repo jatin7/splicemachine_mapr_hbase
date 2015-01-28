@@ -522,8 +522,12 @@ public class TableMapReduceUtil {
 
     Path tablePath = tableMappingRule.getMaprTablePath(tableName.getBytes());
     conf.set(MAPR_TABLE_PATH_CONF_KEY, tablePath.toString());
+    conf.setStrings("io.serializations", conf.get("io.serializations"),
+        MutationSerialization.class.getName(), ResultSerialization.class.getName(),
+        KeyValueSerialization.class.getName());
 
     addDependencyJars(conf, tableMappingRule.getClass());
+    addDependencyJars(job);
     LOG.info("Configured '" + MAPR_TABLE_PATH_CONF_KEY + "' to " + tablePath);
   }
 
