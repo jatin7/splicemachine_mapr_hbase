@@ -522,6 +522,9 @@ public class TableMapReduceUtil {
 
     Path tablePath = tableMappingRule.getMaprTablePath(tableName.getBytes());
     conf.set(MAPR_TABLE_PATH_CONF_KEY, tablePath.toString());
+    // turn off the speculative execution for the MapR bulkload jobs
+    LOG.info("Setting speculative execution off for bulkload operation");
+    job.setSpeculativeExecution(false);
     conf.setStrings("io.serializations", conf.get("io.serializations"),
         MutationSerialization.class.getName(), ResultSerialization.class.getName(),
         KeyValueSerialization.class.getName());
