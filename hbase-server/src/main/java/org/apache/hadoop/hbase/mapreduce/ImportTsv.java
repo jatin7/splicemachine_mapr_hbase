@@ -513,7 +513,9 @@ public class ImportTsv extends Configured implements Tool {
         job.setReducerClass(TextSortReducer.class);
       } else {
         job.setMapOutputValueClass(Put.class);
-        job.setCombinerClass(PutCombiner.class);
+        if (job.getConfiguration().getBoolean(TableMapReduceUtil.ENABLE_PUTCOMBINER, false)) {
+          job.setCombinerClass(PutCombiner.class);
+        }
       }
       HFileOutputFormat.configureIncrementalLoad(job, table);
     } else {
