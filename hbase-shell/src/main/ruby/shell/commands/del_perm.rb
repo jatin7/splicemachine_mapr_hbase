@@ -27,7 +27,7 @@ Examples:
     hbase> del_perm 'encryptperm', '/user/finance/payroll', 'info:bonus'
 
 Available permissions:
-#{com.mapr.fs.hbase.AceHelper::getPermissionsListForShellHelp}
+#{com.mapr.fs.AceHelper::getPermissionsListForShellHelp}
 EOF
       end
 

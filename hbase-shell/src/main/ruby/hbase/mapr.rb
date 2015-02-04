@@ -43,9 +43,9 @@ module Hbase
       @security_available = false
       begin
         @perm_maps = {
-          TYPE_TABLE => com.mapr.fs.hbase.AceHelper::TABLE_PERMISSIONS,
-          TYPE_FAMILY => com.mapr.fs.hbase.AceHelper::FAMILY_PERMISSIONS,
-          TYPE_QUALIFIER => com.mapr.fs.hbase.AceHelper::COLUMN_PERMISSIONS
+          TYPE_TABLE => com.mapr.fs.AceHelper::TABLE_PERMISSIONS,
+          TYPE_FAMILY => com.mapr.fs.AceHelper::FAMILY_PERMISSIONS,
+          TYPE_QUALIFIER => com.mapr.fs.AceHelper::COLUMN_PERMISSIONS
         }
         @admin = com.mapr.fs.hbase.HBaseAdminImpl.new(configuration, @mapping_rules)
         @security_available = true
@@ -171,7 +171,7 @@ module Hbase
     def validate_permissions(type, permission, expression=nil)
       raise(ArgumentError, "The permission '#{permission}' is not valid for #{type}.") if !@perm_maps[type].contains(permission)
       begin
-        com.mapr.fs.hbase.AceHelper::toPostfix(expression) unless expression.nil?
+        com.mapr.fs.AceHelper::toPostfix(expression) unless expression.nil?
       rescue => e
         puts e.message
         puts "Backtrace: #{e.backtrace.join("\n           ")}" if @shell.debug
