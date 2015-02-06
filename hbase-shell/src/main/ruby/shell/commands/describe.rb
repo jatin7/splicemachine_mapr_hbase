@@ -35,9 +35,37 @@ EOF
       def command(table)
         now = Time.now
 
-        column_families = admin.get_column_families(table)
+        desc = admin.get_table_descriptor(table)
+        column_families = desc.getColumnFamilies()
+        attrs = desc.getValues()
+        config = desc.getConfiguration()
 
         formatter.header(["Table " + table.to_s + " is " + if admin.enabled?(table) then "ENABLED" else "DISABLED" end])
+        # Attributes
+        table_info = "TABLE_ATTRIBUTES => {"
+        unless attrs.empty?
+          attrs_str = ""
+          attrs.each do |key, value|
+            attrName = org.apache.hadoop.hbase.util.Bytes.toString(key.get, key.getOffset, key.getLength)
+            attrValue = org.apache.hadoop.hbase.util.Bytes.toString(value.get, value.getOffset, value.getLength)
+            attrs_str << ", #{attrName} => '#{attrValue}'"
+          end
+          table_info << attrs_str[2..-1]
+        end
+        table_info << "}"
+        formatter.row([table_info], true)
+        # Configuration
+        unless config.empty?
+          table_config = "TABLE_CONFIGURATION => {"
+          config_str = ""
+          config.each do |key, value|
+            config_str << ", #{key} => '#{value}'"
+          end
+          table_config << config_str[2..-1]
+          table_config << "}"
+          formatter.row([table_config], true)
+        end
+        # Column Families
         formatter.header([ "COLUMN FAMILIES DESCRIPTION" ])
         column_families.each do |column_family|
           formatter.row([ column_family.to_s ], true)

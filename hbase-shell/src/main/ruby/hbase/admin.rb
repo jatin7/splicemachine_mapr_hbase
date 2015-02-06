@@ -406,6 +406,10 @@ module Hbase
       @admin.getTableDescriptor(table_name.to_java_bytes).to_s
     end
 
+    def get_table_descriptor(table_name)
+      @admin.getTableDescriptor(table_name.to_java_bytes)
+    end
+
     def get_column_families(table_name)
       @admin.getTableDescriptor(table_name.to_java_bytes).getColumnFamilies()
     end
