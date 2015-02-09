@@ -48,6 +48,9 @@ EOF
           attrs.each do |key, value|
             attrName = org.apache.hadoop.hbase.util.Bytes.toString(key.get, key.getOffset, key.getLength)
             attrValue = org.apache.hadoop.hbase.util.Bytes.toString(value.get, value.getOffset, value.getLength)
+            if attrName == "UUID"
+              attrValue = org.apache.hadoop.hbase.util.Bytes.toStringBinary(value.get, value.getOffset, value.getLength);
+            end
             attrs_str << ", #{attrName} => '#{attrValue}'"
           end
           table_info << attrs_str[2..-1]
