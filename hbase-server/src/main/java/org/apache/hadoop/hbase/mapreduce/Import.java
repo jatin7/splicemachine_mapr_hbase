@@ -201,7 +201,7 @@ public class Import {
           put.setDurability(durability);
         }
         put.setClusterIds(clusterIds);
-        put.setTableUuid(tableUuid);
+        put.setAttribute(HTableDescriptor.MAPR_UUID, tableUuid);
         context.write(key, put);
       }
       if (delete != null) {
@@ -209,7 +209,7 @@ public class Import {
           delete.setDurability(durability);
         }
         delete.setClusterIds(clusterIds);
-        delete.setTableUuid(tableUuid);
+        delete.setAttribute(HTableDescriptor.MAPR_UUID, tableUuid);
         context.write(key, delete);
       }
     }
@@ -233,7 +233,7 @@ public class Import {
         try {
           HTable table = new HTable(conf, srcTableName);
           HTableDescriptor htd = table.getTableDescriptor();
-          tableUuid = htd.getValue(Bytes.toBytes("UUID"));
+          tableUuid = htd.getValue(Bytes.toBytes(HTableDescriptor.MAPR_UUID));
         } catch (IOException e) {
           LOG.error("Problem setting up task", e);
         }

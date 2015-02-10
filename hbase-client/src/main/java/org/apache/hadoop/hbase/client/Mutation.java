@@ -86,7 +86,6 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   protected byte [] row = null;
   protected long ts = HConstants.LATEST_TIMESTAMP;
   protected Durability durability = Durability.USE_DEFAULT;
-  protected byte [] tableUuid = null;
 
   // A Map sorted by column family.
   protected NavigableMap<byte [], List<Cell>> familyMap =
@@ -367,14 +366,6 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
       }
     }
     return clusterIds;
-  }
-
-  public void setTableUuid(byte[] tableUuid) {
-    this.tableUuid = tableUuid;
-  }
-
-  public byte[] getTableUuid() {
-    return tableUuid;
   }
 
   /**

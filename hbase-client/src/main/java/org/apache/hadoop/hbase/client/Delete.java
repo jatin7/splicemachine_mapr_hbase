@@ -143,7 +143,6 @@ public class Delete extends Mutation implements Comparable<Row> {
     for (Map.Entry<String, byte[]> entry : d.getAttributesMap().entrySet()) {
       this.setAttribute(entry.getKey(), entry.getValue());
     }
-    this.tableUuid = d.tableUuid;
   }
 
   /**
