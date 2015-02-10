@@ -77,6 +77,8 @@ import com.yammer.metrics.core.MetricsRegistry;
 public class TableMapReduceUtil {
   static Log LOG = LogFactory.getLog(TableMapReduceUtil.class);
 
+  public static final String BULKLOAD = "BULKLOAD";
+
   public static final String MAPR_TABLE_PATH_CONF_KEY = "hbase.mapreduce.mapr.tablepath";
 
   public static final String ENABLE_PUTCOMBINER = "hbase.mapreduce.enable.putcombiner";
