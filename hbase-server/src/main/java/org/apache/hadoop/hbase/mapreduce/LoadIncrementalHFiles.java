@@ -114,6 +114,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     = "hbase.mapreduce.bulkload.max.hfiles.perRegion.perFamily";
   private static final String ASSIGN_SEQ_IDS = "hbase.mapreduce.bulkload.assign.sequenceNumbers";
   public final static String CREATE_TABLE_CONF_KEY = "create.table";
+  public final static String CLEAR_MAPR_BULKLOAD_MODE = "clear.mapr.bulkload.mode";
 
   private int maxFilesPerRegionPerFamily;
   private boolean assignSeqIds;
@@ -228,6 +229,22 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   public void doBulkLoad(Path hfofDir, final HTable table)
     throws TableNotFoundException, IOException
   {
+    if (table.isMapRTable()) {
+      TableName tableName = table.getName();
+      HTableDescriptor htd = hbAdmin.getTableDescriptor(tableName);
+      if (Boolean.valueOf(htd.getValue(TableMapReduceUtil.BULKLOAD))) {
+        if (getConf().getBoolean(CLEAR_MAPR_BULKLOAD_MODE, false)) {
+          htd.setValue(TableMapReduceUtil.BULKLOAD, Boolean.FALSE.toString());
+          hbAdmin.modifyTable(tableName, htd);
+          LOG.info("BULKLOAD attribute cleared for the MapR-DB table: " + tableName);
+        } else {
+          LOG.info("Not clearing BULKLOAD attribute for the MapR-DB table: " + tableName);
+        }
+      } else {
+        LOG.info("BULKLOAD attribute is already cleared for the MapR-DB table: " + tableName);
+      }
+      return;
+    }
     final HConnection conn = table.getConnection();
 
     if (!conn.isTableAvailable(table.getName())) {

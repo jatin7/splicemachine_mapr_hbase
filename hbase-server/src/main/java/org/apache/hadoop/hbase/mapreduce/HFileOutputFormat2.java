@@ -408,9 +408,11 @@ public class HFileOutputFormat2
         MutationSerialization.class.getName(), ResultSerialization.class.getName(),
         KeyValueSerialization.class.getName());
 
-    // Remember the tablePath in jobConf
-    String tableName = Bytes.toString(table.getTableName());
-    TableMapReduceUtil.configureMapRTablePath(job, tableName);
+    if (table.isMapRTable()) {
+      // Remember the tablePath in jobConf
+      String tableName = Bytes.toString(table.getTableName());
+      TableMapReduceUtil.configureMapRTablePath(job, tableName);
+    }
 
     // Use table's region boundaries for TOP split points.
     LOG.info("Looking up current regions for table " + Bytes.toString(table.getTableName()));
@@ -439,11 +441,17 @@ public class HFileOutputFormat2
     job.setOutputValueClass(KeyValue.class);
     job.setOutputFormatClass(HFileOutputFormat2.class);
 
-    // Set compression algorithms based on column families
-    configureCompression(table, conf);
-    configureBloomType(table, conf);
-    configureBlockSize(table, conf);
-    configureDataBlockEncoding(table, conf);
+    if (table.isMapRTable()) {
+      // Remember the tablePath in jobConf
+      String tableName = Bytes.toString(table.getTableName());
+      TableMapReduceUtil.configureMapRTablePath(job, tableName);
+    } else {
+      // Set compression algorithms based on column families
+      configureCompression(table, conf);
+      configureBloomType(table, conf);
+      configureBlockSize(table, conf);
+      configureDataBlockEncoding(table, conf);
+    }
 
     TableMapReduceUtil.addDependencyJars(job);
     TableMapReduceUtil.initCredentials(job);
