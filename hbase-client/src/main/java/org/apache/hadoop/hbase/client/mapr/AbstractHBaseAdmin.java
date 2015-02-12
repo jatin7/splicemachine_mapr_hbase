@@ -22,12 +22,14 @@ package org.apache.hadoop.hbase.client.mapr;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
@@ -274,7 +276,7 @@ public abstract class AbstractHBaseAdmin implements Closeable {
    */
   public abstract boolean isTableAvailable(String tableName,
                                            byte[][] splitKeys) throws IOException;
- 
+
   /**
    * Add a column to an existing table.
    * Asynchronous operation.
@@ -398,4 +400,38 @@ public abstract class AbstractHBaseAdmin implements Closeable {
   public void split(byte[] tableNameOrRegionName, byte[] splitPoint) throws IOException {
     LOG.warn("split() called for a MapR Table, silently ignoring.");
   }
+
+  /**
+   * TODO: Move this to com.mapr.fs.HBaseAdminImpl
+   */
+  public void truncateTable(final TableName tableName, final boolean preserveSplits)
+      throws IOException {
+    byte[][] splitKeys = null;
+    if (preserveSplits) {
+      // fetch the split keys of existing table
+      List<HRegionInfo> regions = getTableRegions(tableName.getQualifier());
+      Collections.sort(regions);
+      List<byte[]> splitKeyList = new ArrayList<byte[]>(regions.size());
+      for (HRegionInfo region : regions) {
+        if (region.getEndKey() != null && region.getEndKey().length != 0) {
+          splitKeyList.add(region.getEndKey());
+        }
+      }
+      splitKeys = splitKeyList.toArray(new byte[splitKeyList.size()][]);
+    }
+
+    // save the table descriptor before deleting
+    String tablePath = tableName.getAliasAsString();
+    HTableDescriptor htd = getTableDescriptor(tablePath);
+
+    // now we can delete the table
+    deleteTable(tablePath);
+
+    // cleanup reserved properties from the descriptor
+    htd.remove(HTableDescriptor.MAPR_UUID_KEY);
+    htd.remove("DISABLED");
+
+    createTable(htd, splitKeys);
+  }
+
 }

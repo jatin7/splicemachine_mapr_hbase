@@ -3258,7 +3258,7 @@ public class HBaseAdmin implements Abortable, Closeable {
                       SnapshotDescription.Type type) throws IOException, SnapshotCreationException,
       IllegalArgumentException {
     if (checkIfMapRTable(tableName, true)) {
-      throw new IllegalArgumentException("snapshot() called for a MapR Table.");
+      throw new UnsupportedOperationException("snapshot() called for a MapR Table.");
     }
 
     tableName = MapRUtil.adjustTableName(tableName);
@@ -3360,7 +3360,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public SnapshotResponse takeSnapshotAsync(SnapshotDescription snapshot) throws IOException,
       SnapshotCreationException {
     if (checkIfMapRTable(snapshot.getTable(), true)) {
-      throw new IllegalArgumentException("takeSnapshotAsync() called for a MapR Table.");
+      throw new UnsupportedOperationException("takeSnapshotAsync() called for a MapR Table.");
     }
     ClientSnapshotDescriptionUtils.assertSnapshotRequestIsValid(snapshot);
     final SnapshotRequest request = SnapshotRequest.newBuilder().setSnapshot(snapshot)
@@ -4027,6 +4027,10 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void truncateTable(final TableName tableName, final boolean preserveSplits)
       throws IOException {
+    if (checkIfMapRTable(tableName, true)) {
+      maprHBaseAdmin_.truncateTable(tableName, preserveSplits);
+      return;
+    }
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
