@@ -529,7 +529,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       this.conf.setInt("hbase.client.retries.number", numRetries);
       this.numRetries = numRetries;
     }
-    return connection.isMasterRunning();
+    return getConnection().isMasterRunning();
   }
 
   /**
@@ -577,7 +577,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     if (checkIfMapRDefault(false) || !ensureConnectedToHBase(false)) {
       return maprHBaseAdmin_.listTables();
     }
-    return this.connection.listTables();
+    return getConnection().listTables();
   }
 
   /**
@@ -630,7 +630,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     if (checkIfMapRDefault(false) || !ensureConnectedToHBase(false)) {
       return maprHBaseAdmin_.getTableNames();
     }
-    return this.connection.getTableNames();
+    return getConnection().getTableNames();
   }
 
   /**
@@ -645,7 +645,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       return maprHBaseAdmin_.getTableNames(pattern.pattern());
     }
     List<String> matched = new ArrayList<String>();
-    for (String name: this.connection.getTableNames()) {
+    for (String name: getConnection().getTableNames()) {
       if (pattern.matcher(name).matches()) {
         matched.add(name);
       }
@@ -676,7 +676,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     if (checkIfMapRDefault(false) || !ensureConnectedToHBase(false)) {
       return maprHBaseAdmin_.listTableNames();
     }
-    return this.connection.listTableNames();
+    return getConnection().listTableNames();
   }
 
   /**
@@ -692,7 +692,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       return maprHBaseAdmin_.getTableDescriptor(tableName.getAliasAsString());
     }
     tableName = MapRUtil.adjustTableName(tableName);
-    return this.connection.getHTableDescriptor(tableName);
+    return getConnection().getHTableDescriptor(tableName);
   }
 
   public HTableDescriptor getTableDescriptor(final byte[] tableName)
@@ -824,7 +824,7 @@ public class HBaseAdmin implements Abortable, Closeable {
             return true;
           }
         };
-        MetaScanner.metaScan(conf, connection, visitor, desc.getTableName());
+        MetaScanner.metaScan(conf, getConnection(), visitor, desc.getTableName());
         if (actualRegCount.get() < numRegs) {
           if (tries == this.numRetries * this.retryLongerMultiplier - 1) {
             throw new RegionOfflineException("Only " + actualRegCount.get() +
@@ -1014,7 +1014,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         " for the table " + tableName + " to be deleted.");
     }
     // Delete cached information to prevent clients from using old locations
-    this.connection.clearRegionCache(tableName);
+    getConnection().clearRegionCache(tableName);
     LOG.info("Deleted " + tableName);
   }
 
@@ -1395,7 +1395,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
     tableName = MapRUtil.adjustTableName(tableName);
     checkTableExistence(tableName);
-    return connection.isTableEnabled(tableName);
+    return getConnection().isTableEnabled(tableName);
   }
 
   public boolean isTableEnabled(byte[] tableName) throws IOException {
@@ -1420,7 +1420,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
     tableName = MapRUtil.adjustTableName(tableName);
     checkTableExistence(tableName);
-    return connection.isTableDisabled(tableName);
+    return getConnection().isTableDisabled(tableName);
   }
 
   public boolean isTableDisabled(byte[] tableName) throws IOException {
@@ -1442,7 +1442,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     }
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
     tableName = MapRUtil.adjustTableName(tableName);
-    return connection.isTableAvailable(tableName);
+    return getConnection().isTableAvailable(tableName);
   }
 
   public boolean isTableAvailable(byte[] tableName) throws IOException {
@@ -1472,7 +1472,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     }
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
     tableName = MapRUtil.adjustTableName(tableName);
-    return connection.isTableAvailable(tableName, splitKeys);
+    return getConnection().isTableAvailable(tableName, splitKeys);
   }
 
   public boolean isTableAvailable(byte[] tableName,
@@ -1804,7 +1804,7 @@ public class HBaseAdmin implements Abortable, Closeable {
           "The servername cannot be null or empty.");
     }
     ServerName sn = ServerName.valueOf(serverName);
-    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
+    AdminService.BlockingInterface admin = getConnection().getAdmin(sn);
     // Close the region without updating zk state.
     CloseRegionRequest request =
       RequestConverter.buildCloseRegionRequest(sn, encodedRegionName, false);
@@ -1833,7 +1833,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       maprHBaseAdmin_.closeRegion(sn, hri);
       return;
     }
-    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
+    AdminService.BlockingInterface admin = getConnection().getAdmin(sn);
     // Close the region without updating zk state.
     ProtobufUtil.closeRegion(admin, sn, hri.getRegionName(), false);
   }
@@ -1847,7 +1847,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       throw new UnsupportedOperationException(
         "getOnlineRegions is not supported for MapR.");
     }
-    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
+    AdminService.BlockingInterface admin = getConnection().getAdmin(sn);
     return ProtobufUtil.getOnlineRegions(admin);
   }
 
@@ -1915,7 +1915,7 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   private void flush(final ServerName sn, final HRegionInfo hri)
   throws IOException {
-    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
+    AdminService.BlockingInterface admin = getConnection().getAdmin(sn);
     FlushRegionRequest request =
       RequestConverter.buildFlushRegionRequest(hri.getRegionName());
     try {
@@ -2094,7 +2094,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       maprHBaseAdmin_.compact(sn, hri, major, family);
       return;
     }
-    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
+    AdminService.BlockingInterface admin = getConnection().getAdmin(sn);
     CompactRegionRequest request =
       RequestConverter.buildCompactRegionRequest(hri.getRegionName(), major, family);
     try {
@@ -2139,7 +2139,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       maprHBaseAdmin_.move(encodedRegionName, destServerName);
       return;
     }
-    MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
+    MasterKeepAliveConnection stub = getConnection().getKeepAliveMasterService();
     try {
       MoveRegionRequest request =
         RequestConverter.buildMoveRegionRequest(encodedRegionName, destServerName);
@@ -2233,7 +2233,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       return;
     }
 
-    MasterKeepAliveConnection master = connection.getKeepAliveMasterService();
+    MasterKeepAliveConnection master = getConnection().getKeepAliveMasterService();
     try {
       master.offlineRegion(null,RequestConverter.buildOfflineRegionRequest(regionName));
     } catch (ServiceException se) {
@@ -2254,7 +2254,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     if (checkIfMapRDefault(true)) {
       return balancer_.getAndSet(on);
     }
-    MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
+    MasterKeepAliveConnection stub = getConnection().getKeepAliveMasterService();
     try {
       SetBalancerRunningRequest req =
         RequestConverter.buildSetBalancerRunningRequest(on, synchronous);
@@ -2287,7 +2287,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     if (checkIfMapRDefault(true)) {
       return true;
     }
-    MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
+    MasterKeepAliveConnection stub = getConnection().getKeepAliveMasterService();
     try {
       return stub.balance(null,RequestConverter.buildBalanceRequest()).getBalancerRan();
     } finally {
@@ -2308,7 +2308,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       return maprHBaseAdmin_.enableCatalogJanitor(enable);
     }
 
-    MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
+    MasterKeepAliveConnection stub = getConnection().getKeepAliveMasterService();
     try {
       return stub.enableCatalogJanitor(null,
           RequestConverter.buildEnableCatalogJanitorRequest(enable)).getPrevValue();
@@ -2328,7 +2328,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       return maprHBaseAdmin_.runCatalogScan();
     }
 
-    MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
+    MasterKeepAliveConnection stub = getConnection().getKeepAliveMasterService();
     try {
       return stub.runCatalogScan(null,
           RequestConverter.buildCatalogScanRequest()).getScanResult();
@@ -2347,7 +2347,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       return maprHBaseAdmin_.isCatalogJanitorEnabled();
     }
 
-    MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
+    MasterKeepAliveConnection stub = getConnection().getKeepAliveMasterService();
     try {
       return stub.isCatalogJanitorEnabled(null,
           RequestConverter.buildIsCatalogJanitorEnabledRequest()).getValue();
@@ -2367,7 +2367,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void mergeRegions(final byte[] encodedNameOfRegionA,
       final byte[] encodedNameOfRegionB, final boolean forcible)
       throws IOException {
-    MasterKeepAliveConnection master = connection
+    MasterKeepAliveConnection master = getConnection()
         .getKeepAliveMasterService();
     try {
       DispatchMergingRegionsRequest request = RequestConverter
@@ -2508,7 +2508,7 @@ public class HBaseAdmin implements Abortable, Closeable {
          Bytes.compareTo(hri.getStartKey(), splitPoint) == 0) {
        throw new IOException("should not give a splitkey which equals to startkey!");
     }
-    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
+    AdminService.BlockingInterface admin = getConnection().getAdmin(sn);
     ProtobufUtil.split(admin, hri, splitPoint);
   }
 
@@ -2593,7 +2593,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         }
       };
 
-      MetaScanner.metaScan(conf, connection, visitor, null);
+      MetaScanner.metaScan(conf, getConnection(), visitor, null);
       pair = result.get();
     }
     return pair;
@@ -2700,9 +2700,9 @@ public class HBaseAdmin implements Abortable, Closeable {
     String hostname = Addressing.parseHostname(hostnamePort);
     int port = Addressing.parsePort(hostnamePort);
     AdminService.BlockingInterface admin =
-      this.connection.getAdmin(ServerName.valueOf(hostname, port, 0));
+        getConnection().getAdmin(ServerName.valueOf(hostname, port, 0));
     StopServerRequest request = RequestConverter.buildStopServerRequest(
-      "Called by admin client " + this.connection.toString());
+      "Called by admin client " + getConnection().toString());
     try {
       admin.stopServer(null, request);
     } catch (ServiceException se) {
@@ -3025,7 +3025,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       return null;
     }
     ServerName sn = ServerName.valueOf(serverName);
-    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
+    AdminService.BlockingInterface admin = getConnection().getAdmin(sn);
     RollWALWriterRequest request = RequestConverter.buildRollWALWriterRequest();
     try {
       RollWALWriterResponse response = admin.rollWALWriter(null, request);
@@ -3093,7 +3093,7 @@ public class HBaseAdmin implements Abortable, Closeable {
           throw new NoServerForRegionException(Bytes.toStringBinary(tableNameOrRegionName));
         } else {
           ServerName sn = regionServerPair.getSecond();
-          AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
+          AdminService.BlockingInterface admin = getConnection().getAdmin(sn);
           GetRegionInfoRequest request = RequestConverter.buildGetRegionInfoRequest(
             regionServerPair.getFirst().getRegionName(), true);
           GetRegionInfoResponse response = admin.getRegionInfo(null, request);
@@ -3109,7 +3109,7 @@ public class HBaseAdmin implements Abortable, Closeable {
           if (pair.getSecond() == null) continue;
           try {
             ServerName sn = pair.getSecond();
-            AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
+            AdminService.BlockingInterface admin = getConnection().getAdmin(sn);
             GetRegionInfoRequest request = RequestConverter.buildGetRegionInfoRequest(
               pair.getFirst().getRegionName(), true);
             GetRegionInfoResponse response = admin.getRegionInfo(null, request);
@@ -3990,7 +3990,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @return A MasterCoprocessorRpcChannel instance
    */
   public CoprocessorRpcChannel coprocessorService() {
-    return new MasterCoprocessorRpcChannel(connection);
+    return new MasterCoprocessorRpcChannel(getConnection());
   }
 
   /**
@@ -4016,7 +4016,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @return A RegionServerCoprocessorRpcChannel instance
    */
   public CoprocessorRpcChannel coprocessorService(ServerName sn) {
-    return new RegionServerCoprocessorRpcChannel(connection, sn);
+    return new RegionServerCoprocessorRpcChannel(getConnection(), sn);
   }
 
   /**
