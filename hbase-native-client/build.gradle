@@ -63,6 +63,10 @@ ext {
   if (!project.hasProperty('googleTestDir')) {
     googleTestDir = "target/gtest-1.7.0"
   }
+
+  if (!project.hasProperty('maprLibDir')) {
+    maprLibDir = "/opt/mapr/lib"
+  }
 }
 
 
@@ -88,6 +92,12 @@ model {
       gtest {
         binaries.withType(SharedLibraryBinary) {
           sharedLibraryFile = file(googleTestDir + libGTestName)
+        }
+      }
+
+      maprclient {
+        binaries.withType(SharedLibraryBinary) {
+          sharedLibraryFile = file(maprLibDir + "/libMapRClient.so")
         }
       }
     }
@@ -135,6 +145,20 @@ sources {
       }
     }
   }
+
+  /* perftest_mapr sources */
+  perftest_mapr {
+    cpp {
+      source {
+        srcDirs "src/test/native/perftest", "src/test/native/common"
+        include "**/*.cc"
+      }
+      exportedHeaders {
+        srcDirs "src/test/native/common", "src/main/native/include"
+      }
+    }
+  }
+
    /* unittests sources */
   unittests {
     cpp {
@@ -218,6 +242,14 @@ executables {
     }
   }
 
+  perftest_mapr {
+    binaries.all {
+      cppCompiler.define "HAS_INCREMENT_SUPPORT"
+      cppCompiler.args "-g" // temporary
+      lib library: 'maprclient', linkage: 'shared'
+    }
+  }
+
   example_async {
     binaries.all {
       lib library: 'hbase', linkage: 'shared'
@@ -246,6 +278,10 @@ task 'hbase' (dependsOn: 'hbaseSharedLibrary') {
 }
 
 task 'perftest' (dependsOn: 'perftestExecutable') {
+  description 'Builds perftest executable.'
+}
+
+task 'perftest_mapr' (dependsOn: 'perftest_maprExecutable') {
   description 'Builds perftest executable.'
 }
 
