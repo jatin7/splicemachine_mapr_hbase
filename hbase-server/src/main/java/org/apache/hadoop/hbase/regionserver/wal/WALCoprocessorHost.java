@@ -83,6 +83,7 @@ public class WALCoprocessorHost
     this.wal = log;
     // load system default cp's from configuration.
     loadSystemCoprocessors(conf, WAL_COPROCESSOR_CONF_KEY);
+    updateCoprocessorList();
   }
 
   @Override
@@ -104,7 +105,8 @@ public class WALCoprocessorHost
       throws IOException {
     boolean bypass = false;
     ObserverContext<WALCoprocessorEnvironment> ctx = null;
-    for (WALEnvironment env: coprocessors) {
+    for ( int i=0; i < coprocessorList.size(); i++) {
+      WALEnvironment env = coprocessorList.get(i);	
       if (env.getInstance() instanceof
           org.apache.hadoop.hbase.coprocessor.WALObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
@@ -137,8 +139,9 @@ public class WALCoprocessorHost
   public void postWALWrite(final HRegionInfo info, final HLogKey logKey, final WALEdit logEdit)
       throws IOException {
     ObserverContext<WALCoprocessorEnvironment> ctx = null;
-    for (WALEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof
+    for ( int i=0; i < coprocessorList.size(); i++) {
+        WALEnvironment env = coprocessorList.get(i);
+        if (env.getInstance() instanceof
           org.apache.hadoop.hbase.coprocessor.WALObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();

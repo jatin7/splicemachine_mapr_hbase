@@ -186,6 +186,7 @@ public class RegionCoprocessorHost
 
     // load Coprocessor From HDFS
     loadTableCoprocessors(conf);
+    updateCoprocessorList();
   }
 
   void loadTableCoprocessors(final Configuration conf) {
@@ -1585,7 +1586,8 @@ public class RegionCoprocessorHost
   private boolean execOperation(final boolean earlyExit, final CoprocessorOperation ctx)
       throws IOException {
     boolean bypass = false;
-    for (RegionEnvironment env: coprocessors) {
+    for ( int i=0; i < coprocessorList.size(); i++) {
+      RegionEnvironment env = coprocessorList.get(i);      
       Coprocessor observer = env.getInstance();
       if (ctx.hasCall(observer)) {
         long startTime = System.nanoTime();
