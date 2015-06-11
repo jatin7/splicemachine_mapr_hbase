@@ -822,12 +822,45 @@ module Hbase
       end
       if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::COMPRESSION)
         compression = arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::COMPRESSION).upcase
-        unless org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.include?(compression)
-          raise(ArgumentError, "Compression #{compression} is not supported. Use one of " + org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.join(" "))
+        if is_mapr_table?(htd.getNameAsString())
+          # Keeping SNAPPY to be backward compatible
+           if (compression == 'SNAPPY')
+            puts "SNAPPY is treated as LZ4"
+            compression = 'LZ4'
+          end
+          incl = com.mapr.fs.hbase.SchemaHelper::Compression.constants.include?(compression)
         else
+          incl = org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.include?(compression)
+        end
+        unless incl
+          if is_mapr_table?(htd.getNameAsString())
+            raise(ArgumentError, "Compression #{compression} is not supported for MapRDB tables. Use one of " + com.mapr.fs.hbase.SchemaHelper::Compression.constants.join(" ") + ".")
+          else
+            raise(ArgumentError, "Compression #{compression} is not supported. Use one of " + org.apache.hadoop.hbase.io.compress.Compression::Algorithm.constants.join(" ") + ".")
+          end
+        else
+          # Match the compression to hbase version (same is done in java code)
+          # Better way to do this?? 
+          if (compression == 'LZF')
+            puts "LZF is treated as LZ4"
+            compression = 'LZ4'
+          end
+          if (compression == 'ZLIB')
+            puts "ZLIB is treated as GZ"
+            compression = 'GZ'
+          end
+          if (compression == 'LZO')
+            puts "LZO is treated as LZ4"
+            compression = 'LZ4'
+          end
+          if (compression == 'OFF')
+            puts "OFF is treated as NONE"
+            compression = 'NONE'
+          end
           family.setCompressionType(org.apache.hadoop.hbase.io.compress.Compression::Algorithm.valueOf(compression))
         end
       end
+
       if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::ENCRYPTION)
         algorithm = arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::ENCRYPTION).upcase
         family.setEncryptionType(algorithm)
