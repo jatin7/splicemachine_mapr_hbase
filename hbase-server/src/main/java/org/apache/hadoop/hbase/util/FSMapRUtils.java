@@ -28,13 +28,41 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.mapr.fs.MapRFileSystem;
+
 /**
  * <a href="http://www.mapr.com">MapR</a> implementation.
  */
 @InterfaceAudience.Private
 public class FSMapRUtils extends FSUtils {
   private static final Log LOG = LogFactory.getLog(FSMapRUtils.class);
-  
+
+  /**
+   * @param conf the Configuration of HBase
+   * @param srcFs
+   * @param desFs
+   * @return Whether srcFs and desFs are on same hdfs or not
+   */
+  @Override
+  public boolean isSameFileSystem(Configuration conf, FileSystem srcFs, FileSystem desFs) {
+
+    boolean srcIsMapRFs = (srcFs instanceof MapRFileSystem);
+    boolean desIsMapRFs = (desFs instanceof MapRFileSystem);
+    if (srcIsMapRFs && desIsMapRFs) {
+      LOG.info("srcFs "+srcFs.getUri()+" is maprfs and desFs "+desFs.getUri()+" is maprfs.");
+      return true;
+    } else if (srcIsMapRFs && !desIsMapRFs) {
+      LOG.warn("srcFs "+srcFs.getUri()+" is maprfs but desFs "+desFs.getUri()+" is NOT maprfs.");
+      return false;
+    } else if (!srcIsMapRFs && desIsMapRFs) {
+      LOG.warn("srcFs "+srcFs.getUri()+" is NOT maprfs but desFs "+desFs.getUri()+" is maprfs.");
+      return false;
+    }  else {
+      LOG.error("This should NOT happen. both srcFs "+srcFs.getUri()+" and desFs "+desFs.getUri()+" are NOT maprfs.");
+      return false;
+    }
+  }
+
   public void recoverFileLease(final FileSystem fs, final Path p,
       Configuration conf, CancelableProgressable reporter) throws IOException {
     LOG.info("Recovering file " + p.toString() +
