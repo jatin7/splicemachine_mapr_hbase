@@ -318,12 +318,12 @@ case $startStop in
   ;;
 
 (status)
-    if [ -f "$pid" ]; then
-      if kill -0 `cat $pid` > /dev/null 2>&1; then
-        echo $command running as process `cat $pid`.
+    if [ -f "$HBASE_PID" ]; then
+      if kill -0 `cat $HBASE_PID` > /dev/null 2>&1; then
+        echo $command running as process `cat $HBASE_PID`.
         exit 0
       fi
-        echo $pid exists with pid `cat $pid` but no $command.
+        echo $HBASE_PID exists with pid `cat $HBASE_PID` but no $command.
         exit 1
     fi
     echo $command not running.
