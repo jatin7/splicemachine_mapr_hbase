@@ -65,6 +65,10 @@
     <module>hbase-annotations</module>
     <module>hbase-checkstyle</module>
   </modules>
+  <scm>
+    <connection>scm:git:git@github.com:splicemachine/mapr-hbase.git</connection>
+    <developerConnection>scm:git:git@github.com:splicemachine/mapr-hbase.git</developerConnection>
+  </scm>
   <issueManagement>
     <system>JIRA</system>
     <url>http://issues.apache.org/jira/browse/HBASE</url>
@@ -2226,13 +2230,17 @@
     </plugins>
   </reporting>
   <distributionManagement>
-    <site>
-      <id>hbase.apache.org</id>
-      <name>HBase Website at hbase.apache.org</name>
-      <!-- On why this is the tmp dir and not hbase.apache.org, see
-               https://issues.apache.org/jira/browse/HBASE-7593?focusedCommentId=13555866&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-13555866
-               -->
-      <url>file:///tmp</url>
-    </site>
+    <repository>
+      <id>splicemachine</id>
+      <name>Splice Machine Releases</name>
+      <url>http://nexus.splicemachine.com/nexus/content/repositories/releases</url>
+      <uniqueVersion>false</uniqueVersion>
+    </repository>
+    <snapshotRepository>
+      <id>splicemachine</id>
+      <name>Splice Machine Snapshots</name>
+      <url>http://nexus.splicemachine.com/nexus/content/repositories/snapshots</url>
+      <uniqueVersion>false</uniqueVersion>
+    </snapshotRepository>
   </distributionManagement>
 </project>
