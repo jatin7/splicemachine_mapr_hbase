@@ -25,7 +25,7 @@
   <parent>
     <artifactId>hbase</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>0.98.12-mapr-1506</version>
+    <version>0.98.12-mapr-1506-splice1.0.2-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
   <artifactId>hbase-rest</artifactId>
