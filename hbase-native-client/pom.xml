@@ -24,7 +24,7 @@
   <parent>
     <groupId>org.apache.hbase</groupId>
     <artifactId>hbase</artifactId>
-    <version>0.98.12-mapr-1506-splice1.0.2-SNAPSHOT</version>
+    <version>0.98.12-mapr-1506-splice1.2.0</version>
     <relativePath>..</relativePath>
   </parent>
 
